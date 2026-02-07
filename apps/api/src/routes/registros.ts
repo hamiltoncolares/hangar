@@ -44,6 +44,17 @@ export async function registrosRoutes(app: FastifyInstance) {
     const imposto = await prisma.imposto.findUnique({ where: { id: body.imposto_id } });
     if (!imposto) throw new Error('imposto not found');
 
+    if (body.status === 'realizado') {
+      const existente = await prisma.registroMensal.findFirst({
+        where: {
+          projetoId: body.projeto_id,
+          mesRef: parseMonth(body.mes_ref),
+          status: 'realizado'
+        }
+      });
+      if (existente) throw new Error('já existe um registro realizado para este mês/projeto');
+    }
+
     const receitaBrutaNum = toNumber(body.receita_bruta, 'receita_bruta');
     const receitaLiquida =
       body.receita_liquida !== undefined
@@ -92,6 +103,22 @@ export async function registrosRoutes(app: FastifyInstance) {
     const imposto = await prisma.imposto.findUnique({ where: { id: impostoId } });
     if (!imposto) throw new Error('imposto not found');
 
+    const nextProjetoId = body.projeto_id ?? atual.projetoId;
+    const nextMesRef = body.mes_ref ? parseMonth(body.mes_ref) : atual.mesRef;
+    const nextStatus = body.status ?? atual.status;
+
+    if (nextStatus === 'realizado') {
+      const existente = await prisma.registroMensal.findFirst({
+        where: {
+          projetoId: nextProjetoId,
+          mesRef: nextMesRef,
+          status: 'realizado',
+          NOT: { id }
+        }
+      });
+      if (existente) throw new Error('já existe um registro realizado para este mês/projeto');
+    }
+
     let receitaLiquida: any = undefined;
     if (body.receita_liquida !== undefined) {
       receitaLiquida = toNumber(body.receita_liquida, 'receita_liquida');
@@ -103,6 +130,7 @@ export async function registrosRoutes(app: FastifyInstance) {
       where: { id },
       data: {
         mesRef: body.mes_ref ? parseMonth(body.mes_ref) : undefined,
+        projetoId: body.projeto_id,
         receitaBruta: body.receita_bruta !== undefined ? receitaBruta : undefined,
         impostoId: body.imposto_id,
         receitaLiquida,
