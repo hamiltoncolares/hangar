@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { getPrisma } from '../db';
-import { calcReceitaLiquida, toNumber } from '../utils';
+import { getPrisma } from '../db.js';
+import { calcReceitaLiquida, toNumber } from '../utils.js';
 
 export async function impostosRoutes(app: FastifyInstance) {
   const prisma = getPrisma();

@@ -1,12 +1,12 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { tiersRoutes } from './routes/tiers';
-import { clientesRoutes } from './routes/clientes';
-import { projetosRoutes } from './routes/projetos';
-import { impostosRoutes } from './routes/impostos';
-import { registrosRoutes } from './routes/registros';
-import { dashboardRoutes } from './routes/dashboard';
-import { exportRoutes } from './routes/export';
+import { tiersRoutes } from './routes/tiers.js';
+import { clientesRoutes } from './routes/clientes.js';
+import { projetosRoutes } from './routes/projetos.js';
+import { impostosRoutes } from './routes/impostos.js';
+import { registrosRoutes } from './routes/registros.js';
+import { dashboardRoutes } from './routes/dashboard.js';
+import { exportRoutes } from './routes/export.js';
 
 const app = Fastify({ logger: true });
 

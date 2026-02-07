@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { getPrisma } from '../db';
+import { getPrisma } from '../db.js';
 
 export async function tiersRoutes(app: FastifyInstance) {
   const prisma = getPrisma();

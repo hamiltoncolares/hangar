@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import ExcelJS from 'exceljs';
-import { getPrisma } from '../db';
+import { getPrisma } from '../db.js';
 
 function formatMonth(d: Date) {
   const year = d.getUTCFullYear();
