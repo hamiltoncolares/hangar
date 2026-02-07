@@ -1,0 +1,134 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --hangar-primary: #000000;
+  --hangar-accent: #001f3f;
+  --hangar-silver: #c0c0c0;
+  --hangar-bg: #ffffff;
+  --hangar-surface: #f6f7f9;
+  --hangar-panel: #ffffff;
+  --hangar-text: #0a0a0a;
+  --hangar-muted: #4b5563;
+  --hangar-cyan: #00e5ff;
+  --hangar-purple: #7c4dff;
+  --hangar-green: #00e676;
+  --hangar-red: #ff1744;
+  --hangar-orange: #ff9100;
+  --hangar-slate: #546e7a;
+}
+
+.dark {
+  color-scheme: dark;
+  --hangar-primary: #ffffff;
+  --hangar-accent: #001f3f;
+  --hangar-silver: #c0c0c0;
+  --hangar-bg: #000000;
+  --hangar-surface: #0b0f14;
+  --hangar-panel: #0f1620;
+  --hangar-text: #e0e0e0;
+  --hangar-muted: #9aa4ad;
+  --hangar-cyan: #00e5ff;
+  --hangar-purple: #7c4dff;
+  --hangar-green: #00e676;
+  --hangar-red: #ff1744;
+  --hangar-orange: #ff9100;
+  --hangar-slate: #546e7a;
+}
+
+body {
+  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  background: var(--hangar-bg);
+  color: var(--hangar-text);
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+}
+
+.hud-surface {
+  background:
+    radial-gradient(1200px 700px at 15% 0%, rgba(0, 229, 255, 0.06), transparent 55%),
+    radial-gradient(900px 600px at 85% 10%, rgba(124, 77, 255, 0.08), transparent 60%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.02));
+}
+
+.hud-grid {
+  background-image:
+    linear-gradient(rgba(84, 110, 122, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(84, 110, 122, 0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at 50% 10%, rgba(0,0,0,0.8), transparent 70%);
+}
+
+.hud-panel {
+  background: color-mix(in srgb, var(--hangar-panel) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(84, 110, 122, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(0, 31, 63, 0.35),
+    0 14px 35px rgba(0, 0, 0, 0.25);
+}
+
+.hud-glow {
+  box-shadow:
+    0 0 0 1px rgba(0, 229, 255, 0.25),
+    0 0 22px rgba(0, 229, 255, 0.22),
+    0 0 55px rgba(0, 229, 255, 0.12);
+}
+
+.hud-glow-purple {
+  box-shadow:
+    0 0 0 1px rgba(124, 77, 255, 0.25),
+    0 0 22px rgba(124, 77, 255, 0.25),
+    0 0 55px rgba(124, 77, 255, 0.12);
+}
+
+.hud-divider {
+  position: relative;
+}
+.hud-divider::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.45), transparent);
+}
+
+.hud-select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(0, 229, 255, 0.6) 50%),
+    linear-gradient(135deg, rgba(0, 229, 255, 0.6) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) calc(50% - 2px),
+    calc(100% - 9px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+}
+
+.enter {
+  animation: enter 500ms ease-out both;
+}
+
+.enter-delay {
+  animation: enter 700ms ease-out both;
+  animation-delay: 120ms;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

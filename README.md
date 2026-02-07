@@ -1,2 +1,15 @@
-# hangar
-**Hangar** cria uma conexão direta com o conceito de "Carteira": um local seguro, organizado e estruturado onde você gerencia ativos valiosos (seus projetos e contratos).
+# Hangar
+
+Monorepo com frontend (React + Vite + Tailwind) e backend (Fastify + Prisma).
+
+## Estrutura
+- apps/web: frontend
+- apps/api: backend
+- packages/shared: tipos e utilitários compartilhados
+- docs: documentação
+
+## Scripts
+- npm run dev:web
+- npm run dev:api
+- npm run build:web
+- npm run build:api

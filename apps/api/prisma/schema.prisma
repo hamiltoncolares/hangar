@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tier {
+  id        String   @id @default(uuid())
+  nome      String
+  clientes  Cliente[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tiers")
+}
+
+model Cliente {
+  id        String    @id @default(uuid())
+  nome      String
+  logoUrl   String?   @map("logo_url")
+  tierId    String    @map("tier_id")
+  tier      Tier      @relation(fields: [tierId], references: [id])
+  projetos  Projeto[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([tierId, nome])
+  @@map("clientes")
+}
+
+model Projeto {
+  id        String           @id @default(uuid())
+  nome      String
+  status    String           @default("ativo")
+  clienteId String           @map("cliente_id")
+  cliente   Cliente          @relation(fields: [clienteId], references: [id])
+  impostos  Imposto[]
+  registros RegistroMensal[]
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  @@unique([clienteId, nome])
+  @@map("projetos")
+}
+
+model Imposto {
+  id             String   @id @default(uuid())
+  projetoId      String   @map("projeto_id")
+  projeto        Projeto  @relation(fields: [projetoId], references: [id])
+  percentual     Decimal
+  vigenciaInicio DateTime @map("vigencia_inicio")
+  vigenciaFim    DateTime? @map("vigencia_fim")
+  ativo          Boolean  @default(true)
+  registros      RegistroMensal[]
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("impostos")
+}
+
+model RegistroMensal {
+  id            String   @id @default(uuid())
+  projetoId     String   @map("projeto_id")
+  projeto       Projeto  @relation(fields: [projetoId], references: [id])
+  mesRef        DateTime @map("mes_ref")
+  receitaBruta  Decimal  @map("receita_bruta")
+  impostoId     String   @map("imposto_id")
+  imposto       Imposto  @relation(fields: [impostoId], references: [id])
+  receitaLiquida Decimal @map("receita_liquida")
+  custoProjetado Decimal @map("custo_projetado")
+  status        String
+  observacoes   String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([projetoId, mesRef, status])
+  @@map("registros_mensais")
+}
