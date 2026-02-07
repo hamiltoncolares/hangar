@@ -10,7 +10,7 @@
     "prisma": "prisma"
   },
   "dependencies": {
-    "@fastify/cors": "^11.2.0",
+    "@fastify/cors": "^8.5.0",
     "@prisma/client": "^5.18.0",
     "exceljs": "^4.4.0",
     "fastify": "^4.28.1"
