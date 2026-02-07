@@ -79,7 +79,7 @@ export async function impostosRoutes(app: FastifyInstance) {
       where: { id: { in: body.registros } }
     });
 
-    const updates = registros.map((r) =>
+    const updates = registros.map((r: { id: string; receitaBruta: unknown }) =>
       prisma.registroMensal.update({
         where: { id: r.id },
         data: {

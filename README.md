@@ -12,7 +12,8 @@ Hangar é uma aplicação para **acompanhar a evolução da carteira de contrato
 ## Stack
 - Frontend: React + Vite + TypeScript + Tailwind
 - Backend: Node.js + Fastify + Prisma
-- Banco: Postgres (gerenciado)
+- Banco: Supabase (Postgres)
+- Deploy: Netlify (frontend) + Render (API)
 
 ## Estrutura do monorepo
 - `apps/web` — frontend
@@ -26,7 +27,11 @@ Hangar é uma aplicação para **acompanhar a evolução da carteira de contrato
    ```
 
 2. Configurar API:
-   - Crie `apps/api/.env` com `DATABASE_URL`.
+   - Crie `apps/api/.env` com:
+     ```
+     DATABASE_URL=postgresql://...
+     FRONTEND_URL=http://localhost:5173
+     ```
 
 3. Rodar API e Web:
    ```bash
@@ -34,18 +39,34 @@ Hangar é uma aplicação para **acompanhar a evolução da carteira de contrato
    npm run dev:web
    ```
 
-## Deploy (Netlify)
+## Deploy
+
+### Frontend (Netlify)
 - **Build command**: `npm run build:web`
 - **Publish directory**: `apps/web/dist`
+- **Env var**: `VITE_API_URL` = URL pública da API no Render
 
-Se preferir, o arquivo `netlify.toml` já está configurado na raiz do projeto.
+### Backend (Render)
+**Passos**
+1. Acesse Render → **New** → **Web Service** → conecte o repositório.
+2. Configure:
+   - **Root Directory**: `apps/api`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `node dist/index.js`
+3. Environment Variables:
+   - `DATABASE_URL` = Supabase Postgres
+   - `FRONTEND_URL` = URL do Netlify (ex.: `https://airhangar.netlify.app`)
+4. Deploy.
 
-## Notas
+**Notas**
+- O Render free pode entrar em sleep com inatividade.
+- O Supabase é o banco e não hospeda sua API Fastify.
+
+## Notas de negócio
 - Receita líquida é **persistida**, não recalcula automaticamente ao mudar imposto.
 - Ao alterar imposto, deve-se escolher quais registros serão recalculados.
 
 ## Próximos passos sugeridos
-- Validação de regras de negócio mais rígidas
 - Login Microsoft (Azure AD) e controle de permissões
 - Upload de logomarca por cliente
 - Versão iOS conectada ao mesmo backend

@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { tiersRoutes } from './routes/tiers';
 import { clientesRoutes } from './routes/clientes';
 import { projetosRoutes } from './routes/projetos';
@@ -8,6 +9,18 @@ import { dashboardRoutes } from './routes/dashboard';
 import { exportRoutes } from './routes/export';
 
 const app = Fastify({ logger: true });
+
+await app.register(cors, {
+  origin: (origin, cb) => {
+    const allowed = [
+      'http://localhost:5173',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+    if (!origin) return cb(null, true);
+    if (allowed.includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed'), false);
+  }
+});
 
 app.setErrorHandler((err, _req, reply) => {
   const statusCode = err.statusCode && err.statusCode >= 400 ? err.statusCode : 400;

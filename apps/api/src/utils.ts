@@ -1,5 +1,3 @@
-import { Prisma } from '@prisma/client';
-
 export function parseMonth(value: string): Date {
   if (!value) throw new Error('mes_ref is required');
   const v = value.trim();
@@ -11,7 +9,7 @@ export function parseMonth(value: string): Date {
 export function calcReceitaLiquida(receitaBruta: number, percentual: number) {
   const imposto = receitaBruta * (percentual / 100);
   const liquida = receitaBruta - imposto;
-  return new Prisma.Decimal(liquida.toFixed(2));
+  return Number(liquida.toFixed(2));
 }
 
 export function toNumber(value: unknown, field: string) {

@@ -1,6 +1,5 @@
 import { FastifyInstance } from 'fastify';
 import { getPrisma } from '../db';
-import { Prisma } from '@prisma/client';
 
 export async function dashboardRoutes(app: FastifyInstance) {
   const prisma = getPrisma();
@@ -14,43 +13,38 @@ export async function dashboardRoutes(app: FastifyInstance) {
     };
 
     const year = ano ? Number(ano) : new Date().getFullYear();
+    const start = new Date(Date.UTC(year, 0, 1));
+    const end = new Date(Date.UTC(year + 1, 0, 1));
 
-    let where = Prisma.sql`WHERE EXTRACT(YEAR FROM rm.mes_ref) = ${year}`;
-    if (tier_id) where = Prisma.sql`${where} AND t.id = ${tier_id}`;
-    if (cliente_id) where = Prisma.sql`${where} AND c.id = ${cliente_id}`;
-    if (projeto_id) where = Prisma.sql`${where} AND p.id = ${projeto_id}`;
+    const projetoWhere: any = {};
+    if (projeto_id) projetoWhere.id = projeto_id;
+    if (cliente_id) projetoWhere.clienteId = cliente_id;
+    if (tier_id) projetoWhere.cliente = { ...(projetoWhere.cliente ?? {}), tierId: tier_id };
 
-    const rows = await prisma.$queryRaw<
-      Array<{
-        mes: Date;
-        receita_bruta: number;
-        receita_liquida: number;
-        custo: number;
-      }>
-    >(Prisma.sql`
-      SELECT
-        date_trunc('month', rm.mes_ref) AS mes,
-        COALESCE(SUM(rm.receita_bruta), 0) AS receita_bruta,
-        COALESCE(SUM(rm.receita_liquida), 0) AS receita_liquida,
-        COALESCE(SUM(rm.custo_projetado), 0) AS custo
-      FROM registros_mensais rm
-      JOIN projetos p ON rm.projeto_id = p.id
-      JOIN clientes c ON p.cliente_id = c.id
-      JOIN tiers t ON c.tier_id = t.id
-      ${where}
-      GROUP BY 1
-      ORDER BY 1
-    `);
+    const registros = await prisma.registroMensal.findMany({
+      where: {
+        mesRef: { gte: start, lt: end },
+        ...(Object.keys(projetoWhere).length ? { projeto: projetoWhere } : {})
+      }
+    });
 
-    const byMonth = new Map<number, typeof rows[0]>();
-    rows.forEach((r) => byMonth.set(new Date(r.mes).getUTCMonth() + 1, r));
+    const byMonth = new Map<number, { receita_bruta: number; receita_liquida: number; custo: number }>();
+    for (const r of registros) {
+      const m = r.mesRef.getUTCMonth() + 1;
+      const prev = byMonth.get(m) ?? { receita_bruta: 0, receita_liquida: 0, custo: 0 };
+      byMonth.set(m, {
+        receita_bruta: prev.receita_bruta + Number(r.receitaBruta),
+        receita_liquida: prev.receita_liquida + Number(r.receitaLiquida),
+        custo: prev.custo + Number(r.custoProjetado)
+      });
+    }
 
     const series_mensal = Array.from({ length: 12 }).map((_, idx) => {
       const month = idx + 1;
       const r = byMonth.get(month);
-      const receita_bruta = r ? Number(r.receita_bruta) : 0;
-      const receita_liquida = r ? Number(r.receita_liquida) : 0;
-      const custo = r ? Number(r.custo) : 0;
+      const receita_bruta = r ? r.receita_bruta : 0;
+      const receita_liquida = r ? r.receita_liquida : 0;
+      const custo = r ? r.custo : 0;
       const margem_bruta = receita_bruta - custo;
       const margem_liquida = receita_liquida - custo;
 
