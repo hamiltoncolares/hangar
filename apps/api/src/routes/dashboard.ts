@@ -28,8 +28,32 @@ export async function dashboardRoutes(app: FastifyInstance) {
       }
     });
 
-    const byMonth = new Map<number, { receita_bruta: number; receita_liquida: number; custo: number }>();
+    // Regra: se houver realizado, usa ele. Se houver múltiplos planejados, usa o mais recente.
+    const byKey = new Map<string, typeof registros[number]>();
     for (const r of registros) {
+      const key = `${r.projetoId}-${r.mesRef.toISOString().slice(0, 10)}`;
+      const current = byKey.get(key);
+      if (!current) {
+        byKey.set(key, r);
+        continue;
+      }
+      if (current.status === 'realizado') {
+        if (r.status === 'realizado') {
+          // mantém o mais recente
+          if (r.updatedAt > current.updatedAt) byKey.set(key, r);
+        }
+        continue;
+      }
+      if (r.status === 'realizado') {
+        byKey.set(key, r);
+        continue;
+      }
+      // ambos planejados: pega o mais recente
+      if (r.updatedAt > current.updatedAt) byKey.set(key, r);
+    }
+
+    const byMonth = new Map<number, { receita_bruta: number; receita_liquida: number; custo: number }>();
+    for (const r of byKey.values()) {
       const m = r.mesRef.getUTCMonth() + 1;
       const prev = byMonth.get(m) ?? { receita_bruta: 0, receita_liquida: 0, custo: 0 };
       byMonth.set(m, {
