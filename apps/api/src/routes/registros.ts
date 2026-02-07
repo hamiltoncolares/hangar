@@ -83,6 +83,7 @@ export async function registrosRoutes(app: FastifyInstance) {
   app.patch('/registros/:id', async (req) => {
     const { id } = req.params as { id: string };
     const body = req.body as {
+      projeto_id?: string;
       mes_ref?: string;
       receita_bruta?: number;
       imposto_id?: string;
