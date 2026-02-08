@@ -8,7 +8,9 @@ import { ClientesPage } from './pages/ClientesPage';
 import { ProjetosPage } from './pages/ProjetosPage';
 import { ImpostosPage } from './pages/ImpostosPage';
 import { RegistrosPage } from './pages/RegistrosPage';
-import { apiClient } from './lib/api';
+import { AdminPage } from './pages/AdminPage';
+import { AuthPage } from './pages/AuthPage';
+import { apiClient, getAuthToken, setAuthToken } from './lib/api';
 
 export default function App() {
   const [theme, setTheme] = useState<Theme>('light');
@@ -23,6 +25,8 @@ export default function App() {
   const [dashboardStatus, setDashboardStatus] = useState<'planejado' | 'realizado' | 'pipeline' | ''>('pipeline');
   const [dashboardView, setDashboardView] = useState<'mensal' | 'trimestral'>('mensal');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<{ id: string; email: string; role: string; status: string; name?: string | null } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const t = getInitialTheme();
@@ -35,10 +39,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      setAuthChecked(true);
+      return;
+    }
+    apiClient
+      .me()
+      .then((res) => setUser(res.user))
+      .catch(() => {
+        setAuthToken('');
+        setUser(null);
+      })
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
     apiClient.listTiers().then(setTiers).catch(() => {});
     apiClient.listClientes().then(setClientes).catch(() => {});
     apiClient.listProjetos().then(setProjetos).catch(() => {});
-  }, []);
+  }, [user]);
 
   const filteredClientes = useMemo(
     () => (tierId ? clientes.filter((c) => c.tierId === tierId) : clientes),
@@ -49,6 +70,14 @@ export default function App() {
     () => (clienteId ? projetos.filter((p) => p.clienteId === clienteId) : projetos),
     [clienteId, projetos]
   );
+
+  if (!authChecked) {
+    return <div className="min-h-screen bg-hangar-bg text-hangar-text flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (!user) {
+    return <AuthPage onAuth={(u) => setUser(u)} />;
+  }
 
   return (
     <div className="flex min-h-screen bg-hangar-bg text-hangar-text">
@@ -65,6 +94,26 @@ export default function App() {
             applyTheme(next);
           }}
         >
+          {user?.role === 'admin' && (
+            <button
+              className="rounded-md border border-hangar-slate/40 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
+              onClick={() => setActive('admin')}
+            >
+              Admin
+            </button>
+          )}
+          <div className="text-[10px] md:text-xs text-hangar-muted">
+            {user.name || user.email}
+          </div>
+          <button
+            className="rounded-md border border-hangar-slate/40 px-3 py-2 text-[10px] md:text-xs text-hangar-muted transition hover:bg-hangar-surface"
+            onClick={() => {
+              setAuthToken('');
+              setUser(null);
+            }}
+          >
+            Sair
+          </button>
           {active === 'dashboard' && (
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <select
@@ -142,7 +191,9 @@ export default function App() {
                 className="rounded-md border border-hangar-slate/40 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
                 onClick={async () => {
                   const params = tierId ? `?tier_id=${tierId}` : '';
-                  const res = await fetch(`/api/export/excel${params}`);
+                  const res = await fetch(`/api/export/excel${params}`, {
+                    headers: getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : undefined
+                  });
                   const blob = await res.blob();
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
@@ -168,6 +219,7 @@ export default function App() {
           {active === 'projetos' && <ProjetosPage />}
           {active === 'impostos' && <ImpostosPage />}
           {active === 'registros' && <RegistrosPage />}
+          {active === 'admin' && user?.role === 'admin' && <AdminPage />}
         </main>
       </div>
     </div>
@@ -176,6 +228,8 @@ export default function App() {
 
 function activeTitle(active: string) {
   switch (active) {
+    case 'admin':
+      return 'Admin';
     case 'tiers':
       return 'Tiers';
     case 'clientes':
@@ -193,6 +247,8 @@ function activeTitle(active: string) {
 
 function activeSubtitle(active: string) {
   switch (active) {
+    case 'admin':
+      return 'Gestão de usuários e acessos';
     case 'tiers':
       return 'Organização por nível';
     case 'clientes':

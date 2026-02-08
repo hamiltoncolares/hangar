@@ -13,6 +13,7 @@ export function RegistrosPage() {
   const [mesRef, setMesRef] = useState('');
   const [receitaBruta, setReceitaBruta] = useState('');
   const [custo, setCusto] = useState('');
+  const [marginMeta, setMarginMeta] = useState('');
   const [status, setStatus] = useState<'planejado' | 'realizado'>('planejado');
   const [observacoes, setObservacoes] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
@@ -21,6 +22,7 @@ export function RegistrosPage() {
   const [editMes, setEditMes] = useState('');
   const [editReceita, setEditReceita] = useState('');
   const [editCusto, setEditCusto] = useState('');
+  const [editMarginMeta, setEditMarginMeta] = useState('');
   const [editStatus, setEditStatus] = useState<'planejado' | 'realizado'>('planejado');
   const [editObs, setEditObs] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -109,6 +111,12 @@ export function RegistrosPage() {
             placeholder="Custo projetado"
             className="mt-3"
           />
+          <Input
+            value={marginMeta}
+            onChange={(e) => setMarginMeta(formatPercentInput(e.target.value))}
+            placeholder="Margin Meta (%)"
+            className="mt-3"
+          />
           <Select
             value={status}
             onChange={(e) => setStatus(e.target.value as 'planejado' | 'realizado')}
@@ -140,6 +148,7 @@ export function RegistrosPage() {
                   mes_ref: mesRef,
                   receita_bruta: parseCurrency(receitaBruta),
                   custo_projetado: parseCurrency(custo),
+                  ...(marginMeta.trim() ? { margin_meta: parsePercent(marginMeta) } : {}),
                   status,
                   observacoes
                 });
@@ -148,6 +157,7 @@ export function RegistrosPage() {
                 setMesRef('');
                 setReceitaBruta('');
                 setCusto('');
+                setMarginMeta('');
                 setObservacoes('');
                 push({ type: 'success', message: 'Registro criado' });
                 load();
@@ -187,6 +197,7 @@ export function RegistrosPage() {
                   <th className="py-2">Mês</th>
                   <th className="py-2">Receita</th>
                   <th className="py-2">Custo</th>
+                  <th className="py-2">Margin Meta</th>
                   <th className="py-2">Status</th>
                 </tr>
               </thead>
@@ -194,8 +205,8 @@ export function RegistrosPage() {
               {(Array.isArray(items) ? items : []).map((r) => (
                 <tr key={r.id} className="border-t border-hangar-slate/20 odd:bg-hangar-surface/40 hover:bg-hangar-surface/70 transition">
                     {editId === r.id ? (
-                      <td colSpan={5} className="py-2">
-                        <div className="grid gap-2 md:grid-cols-6">
+                      <td colSpan={6} className="py-2">
+                        <div className="grid gap-2 md:grid-cols-7">
                           <Select value={editProjeto} onChange={(e) => setEditProjeto(e.target.value)}>
                             <option value="">Projeto</option>
                             {projetos.map((p) => (
@@ -211,6 +222,7 @@ export function RegistrosPage() {
                           <Input value={editMes} onChange={(e) => setEditMes(e.target.value)} placeholder="YYYY-MM" />
                           <Input value={editReceita} onChange={(e) => setEditReceita(formatCurrencyInput(e.target.value))} placeholder="Receita" />
                           <Input value={editCusto} onChange={(e) => setEditCusto(formatCurrencyInput(e.target.value))} placeholder="Custo" />
+                          <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(formatPercentInput(e.target.value))} placeholder="Margin %" />
                           <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value as any)}>
                             <option value="planejado">Planejado</option>
                             <option value="realizado">Realizado</option>
@@ -232,6 +244,7 @@ export function RegistrosPage() {
                                   mes_ref: editMes,
                                   receita_bruta: parseCurrency(editReceita),
                                   custo_projetado: parseCurrency(editCusto),
+                                  ...(editMarginMeta.trim() ? { margin_meta: parsePercent(editMarginMeta) } : {}),
                                   status: editStatus,
                                   observacoes: editObs
                                 });
@@ -253,6 +266,7 @@ export function RegistrosPage() {
                         <td className="py-2 text-hangar-muted">{String(r.mesRef).slice(0, 10)}</td>
                         <td className="py-2">{Number(r.receitaBruta).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                         <td className="py-2">{Number(r.custoProjetado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td className="py-2 text-hangar-muted">{formatPercent(r.marginMeta)}</td>
                         <td className="py-2">
                           <div className="flex items-center gap-2">
                             <span
@@ -273,6 +287,7 @@ export function RegistrosPage() {
                                 setEditMes(String(r.mesRef).slice(0, 7));
                                 setEditReceita(String(r.receitaBruta));
                                 setEditCusto(String(r.custoProjetado));
+                                setEditMarginMeta(r.marginMeta !== null && r.marginMeta !== undefined ? formatPercentInput(String(r.marginMeta)) : '');
                                 setEditStatus(r.status);
                                 setEditObs(r.observacoes ?? '');
                               }}
@@ -323,6 +338,22 @@ function formatCurrencyInput(value: string) {
 function parseCurrency(value: string) {
   const digits = value.replace(/\D/g, '');
   return Number(digits) / 100;
+}
+
+function formatPercentInput(value: string) {
+  const cleaned = value.replace(/[^\d.,]/g, '').replace(',', '.');
+  return cleaned;
+}
+
+function parsePercent(value: string) {
+  const cleaned = value.replace(',', '.');
+  const num = Number(cleaned);
+  return Number.isNaN(num) ? 0 : num;
+}
+
+function formatPercent(value?: number) {
+  if (value === undefined || value === null) return '--';
+  return `${Number(value).toFixed(1)}%`;
 }
 
 function applyPipeline(items: any[]) {

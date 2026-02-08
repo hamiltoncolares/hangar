@@ -11,17 +11,29 @@ function formatMonth(d: Date) {
 export async function exportRoutes(app: FastifyInstance) {
   const prisma = getPrisma();
 
+  app.addHook('preHandler', app.authenticate);
+
   app.get('/export/excel', async (req, reply) => {
     const { tier_id } = req.query as { tier_id?: string };
+    if (req.user?.role !== 'admin') {
+      const allowed = req.userTierIds ?? [];
+      if (tier_id && !allowed.includes(tier_id)) {
+        reply.status(403).send({ error: 'forbidden' });
+        return;
+      }
+    }
+
+    const exportProjetoWhere: any = {};
+    if (tier_id) exportProjetoWhere.cliente = { ...(exportProjetoWhere.cliente ?? {}), tierId: tier_id };
+    if (req.user?.role !== 'admin') {
+      exportProjetoWhere.cliente = {
+        ...(exportProjetoWhere.cliente ?? {}),
+        tierId: { in: req.userTierIds ?? [] }
+      };
+    }
 
     const registros = await prisma.registroMensal.findMany({
-      where: tier_id
-        ? {
-            projeto: {
-              cliente: { tierId: tier_id }
-            }
-          }
-        : undefined,
+      where: Object.keys(exportProjetoWhere).length ? { projeto: exportProjetoWhere } : undefined,
       include: {
         imposto: true,
         projeto: {

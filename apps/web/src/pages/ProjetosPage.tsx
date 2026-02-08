@@ -99,82 +99,111 @@ export function ProjetosPage() {
         </Panel>
         <Panel className="xl:col-span-2">
           <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
-          <ul className="mt-3 space-y-2 text-xs md:text-sm">
-            {items.map((p) => (
-              <li key={p.id} className="flex items-center justify-between border-b border-hangar-slate/20 pb-2">
-                {editId === p.id ? (
-                  <div className="flex w-full items-center gap-2">
-                    <Select value={editCliente} onChange={(e) => setEditCliente(e.target.value)}>
-                      <option value="">Selecione o Cliente</option>
-                      {clientes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nome}
-                        </option>
-                      ))}
-                    </Select>
-                    <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
-                    <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                      <option value="ativo">Ativo</option>
-                      <option value="pausado">Pausado</option>
-                    </Select>
-                    <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
-                    <Button
-                      onClick={async () => {
-                        if (!editCliente) {
-                          setEditError('Cliente é obrigatório');
-                          return;
-                        }
-                        if (!editNome.trim()) {
-                          setEditError('Nome é obrigatório');
-                          return;
-                        }
-                        setEditError(null);
-                        const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
-                        await apiClient.updateProjeto(p.id, { nome: editNome, cliente_id: editCliente, status: editStatus, margin_meta: meta });
-                        setEditId(null);
-                        push({ type: 'success', message: 'Projeto atualizado' });
-                        load();
-                      }}
-                    >
-                      Salvar
-                    </Button>
-                    {editError && <span className="text-xs text-hangar-red">{editError}</span>}
-                    <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
-                  </div>
-                ) : (
-                  <>
-                    <span>{p.nome}</span>
-                    <span className="text-xs text-hangar-muted">{clientes.find((c) => c.id === p.clienteId)?.nome ?? '—'}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="text-xs text-hangar-cyan"
-                        onClick={() => {
-                          setEditId(p.id);
-                          setEditNome(p.nome);
-                          setEditCliente(p.clienteId);
-                          setEditStatus(p.status);
-                          setEditMarginMeta(p.marginMeta !== undefined && p.marginMeta !== null ? String(p.marginMeta) : '');
-                        }}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        className="text-xs text-hangar-red"
-                        onClick={async () => {
-                          if (!window.confirm('Excluir este projeto?')) return;
-                          await apiClient.deleteProjeto(p.id);
-                          push({ type: 'success', message: 'Projeto excluído' });
-                          load();
-                        }}
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 overflow-x-auto text-xs md:text-sm">
+            <table className="w-full">
+              <thead className="text-left text-xs text-hangar-muted">
+                <tr>
+                  <th className="py-2">Projeto</th>
+                  <th className="py-2">Cliente</th>
+                  <th className="py-2">Status</th>
+                  <th className="py-2">Margin Meta</th>
+                  <th className="py-2">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((p) => (
+                  <tr key={p.id} className="border-t border-hangar-slate/20">
+                    {editId === p.id ? (
+                      <>
+                        <td className="py-2">
+                          <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                        </td>
+                        <td className="py-2">
+                          <Select value={editCliente} onChange={(e) => setEditCliente(e.target.value)}>
+                            <option value="">Selecione o Cliente</option>
+                            {clientes.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.nome}
+                              </option>
+                            ))}
+                          </Select>
+                        </td>
+                        <td className="py-2">
+                          <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
+                            <option value="ativo">Ativo</option>
+                            <option value="pausado">Pausado</option>
+                          </Select>
+                        </td>
+                        <td className="py-2">
+                          <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
+                        </td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={async () => {
+                                if (!editCliente) {
+                                  setEditError('Cliente é obrigatório');
+                                  return;
+                                }
+                                if (!editNome.trim()) {
+                                  setEditError('Nome é obrigatório');
+                                  return;
+                                }
+                                setEditError(null);
+                                const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
+                                await apiClient.updateProjeto(p.id, { nome: editNome, cliente_id: editCliente, status: editStatus, margin_meta: meta });
+                                setEditId(null);
+                                push({ type: 'success', message: 'Projeto atualizado' });
+                                load();
+                              }}
+                            >
+                              Salvar
+                            </Button>
+                            {editError && <span className="text-xs text-hangar-red">{editError}</span>}
+                            <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-2">{p.nome}</td>
+                        <td className="py-2 text-hangar-muted">{clientes.find((c) => c.id === p.clienteId)?.nome ?? '—'}</td>
+                        <td className="py-2 text-hangar-muted">{p.status}</td>
+                        <td className="py-2 text-hangar-muted">{formatPercent(p.marginMeta)}</td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-xs text-hangar-cyan"
+                              onClick={() => {
+                                setEditId(p.id);
+                                setEditNome(p.nome);
+                                setEditCliente(p.clienteId);
+                                setEditStatus(p.status);
+                                setEditMarginMeta(p.marginMeta !== undefined && p.marginMeta !== null ? String(p.marginMeta) : '');
+                              }}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              className="text-xs text-hangar-red"
+                              onClick={async () => {
+                                if (!window.confirm('Excluir este projeto?')) return;
+                                await apiClient.deleteProjeto(p.id);
+                                push({ type: 'success', message: 'Projeto excluído' });
+                                load();
+                              }}
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       </div>
     </div>
@@ -188,4 +217,9 @@ function Header({ title, description }: { title: string; description: string }) 
       <p className="text-xs text-hangar-muted">{description}</p>
     </div>
   );
+}
+
+function formatPercent(value?: number) {
+  if (value === undefined || value === null) return '--';
+  return `${Number(value).toFixed(1)}%`;
 }

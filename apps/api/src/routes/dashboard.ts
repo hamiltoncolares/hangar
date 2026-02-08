@@ -4,6 +4,8 @@ import { getPrisma } from '../db.js';
 export async function dashboardRoutes(app: FastifyInstance) {
   const prisma = getPrisma();
 
+  app.addHook('preHandler', app.authenticate);
+
   app.get('/dashboard', async (req) => {
     const { tier_id, cliente_id, projeto_id, ano, status } = req.query as {
       tier_id?: string;
@@ -22,6 +24,17 @@ export async function dashboardRoutes(app: FastifyInstance) {
     if (cliente_id) projetoWhere.clienteId = cliente_id;
     if (tier_id) projetoWhere.cliente = { ...(projetoWhere.cliente ?? {}), tierId: tier_id };
 
+    if (req.user?.role !== 'admin') {
+      const allowed = req.userTierIds ?? [];
+      if (tier_id && !allowed.includes(tier_id)) {
+        return { series_mensal: [], totais: { receita_bruta: 0, receita_liquida: 0, custo: 0, margem_bruta: 0, margem_liquida: 0, margem_bruta_pct: 0, margem_liquida_pct: 0 }, planned_vs_realizado: [], cliente_share: [] };
+      }
+      projetoWhere.cliente = {
+        ...(projetoWhere.cliente ?? {}),
+        tierId: { in: tier_id ? [tier_id] : allowed }
+      };
+    }
+
     const registros = await prisma.registroMensal.findMany({
       where: {
         mesRef: { gte: start, lt: end },
@@ -33,7 +46,10 @@ export async function dashboardRoutes(app: FastifyInstance) {
             marginMeta: true,
             cliente: {
               select: {
+                id: true,
+                nome: true,
                 marginMeta: true,
+                tierId: true,
                 tier: { select: { marginMeta: true } }
               }
             }
@@ -42,12 +58,37 @@ export async function dashboardRoutes(app: FastifyInstance) {
       }
     });
 
+    const shareProjetoWhere: any = {};
+    if (tier_id) shareProjetoWhere.cliente = { ...(shareProjetoWhere.cliente ?? {}), tierId: tier_id };
+    if (req.user?.role !== 'admin') {
+      const allowed = req.userTierIds ?? [];
+      shareProjetoWhere.cliente = {
+        ...(shareProjetoWhere.cliente ?? {}),
+        tierId: { in: tier_id ? [tier_id] : allowed }
+      };
+    }
+
+    const registrosShare = await prisma.registroMensal.findMany({
+      where: {
+        mesRef: { gte: start, lt: end },
+        ...(Object.keys(shareProjetoWhere).length ? { projeto: shareProjetoWhere } : {})
+      },
+      include: {
+        projeto: {
+          select: {
+            cliente: { select: { id: true, nome: true } }
+          }
+        }
+      }
+    });
+
     const planned_vs_realizado = buildPlannedVsRealizado(registros, year);
+    const cliente_share = buildClienteShare(registrosShare);
 
     if (status === 'planejado' || status === 'realizado') {
       const filtered = registros.filter((r) => r.status === status);
       const base = buildResponse(filtered, year);
-      return { ...base, planned_vs_realizado };
+      return { ...base, planned_vs_realizado, cliente_share };
     }
 
     // Pipeline (default): se houver realizado, usa ele. Se houver múltiplos planejados, usa o mais recente.
@@ -75,7 +116,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
     }
 
     const base = buildResponse(Array.from(byKey.values()), year);
-    return { ...base, planned_vs_realizado };
+    return { ...base, planned_vs_realizado, cliente_share };
   });
 }
 
@@ -86,7 +127,7 @@ function buildResponse(registros: Array<any>, year: number) {
     const prev = byMonth.get(m) ?? { receita_bruta: 0, receita_liquida: 0, custo: 0, meta_sum: 0, meta_base: 0 };
     const receitaLiquida = Number(r.receitaLiquida);
     const marginMetaRaw =
-      r.projeto?.marginMeta ?? r.projeto?.cliente?.marginMeta ?? r.projeto?.cliente?.tier?.marginMeta;
+      r.marginMeta ?? r.projeto?.marginMeta ?? r.projeto?.cliente?.marginMeta ?? r.projeto?.cliente?.tier?.marginMeta;
     const marginMeta = marginMetaRaw !== null && marginMetaRaw !== undefined ? Number(marginMetaRaw) : undefined;
     byMonth.set(m, {
       receita_bruta: prev.receita_bruta + Number(r.receitaBruta),
@@ -187,4 +228,43 @@ function buildPlannedVsRealizado(registros: Array<any>, year: number) {
       custo_realizado: custoRealizado
     };
   });
+}
+
+function buildClienteShare(registros: Array<any>) {
+  const byKey = new Map<string, any>();
+  for (const r of registros) {
+    if (!r.projeto?.cliente) continue;
+    const key = `${r.projetoId}-${r.mesRef.getUTCFullYear()}-${String(r.mesRef.getUTCMonth() + 1).padStart(2, '0')}`;
+    const current = byKey.get(key);
+    if (!current) {
+      byKey.set(key, r);
+      continue;
+    }
+    if (current.status === 'realizado') {
+      if (r.status === 'realizado' && r.updatedAt > current.updatedAt) byKey.set(key, r);
+      continue;
+    }
+    if (r.status === 'realizado') {
+      byKey.set(key, r);
+      continue;
+    }
+    if (r.updatedAt > current.updatedAt) byKey.set(key, r);
+  }
+
+  const byCliente = new Map<string, { id: string; nome: string; receita_bruta: number }>();
+  for (const r of byKey.values()) {
+    const cliente = r.projeto?.cliente;
+    if (!cliente) continue;
+    const prev = byCliente.get(cliente.id) ?? { id: cliente.id, nome: cliente.nome, receita_bruta: 0 };
+    byCliente.set(cliente.id, {
+      ...prev,
+      receita_bruta: prev.receita_bruta + Number(r.receitaBruta)
+    });
+  }
+
+  const items = Array.from(byCliente.values());
+  const total = items.reduce((acc, cur) => acc + cur.receita_bruta, 0);
+  return items
+    .map((i) => ({ ...i, pct: total > 0 ? i.receita_bruta / total : 0 }))
+    .sort((a, b) => b.receita_bruta - a.receita_bruta);
 }

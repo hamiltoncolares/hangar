@@ -89,77 +89,102 @@ export function ClientesPage() {
         </Panel>
         <Panel className="xl:col-span-2">
           <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
-          <ul className="mt-3 space-y-2 text-xs md:text-sm">
-            {items.map((c) => (
-              <li key={c.id} className="flex items-center justify-between border-b border-hangar-slate/20 pb-2">
-                {editId === c.id ? (
-                  <div className="flex w-full items-center gap-2">
-                    <Select value={editTier} onChange={(e) => setEditTier(e.target.value)}>
-                      <option value="">Selecione o Tier</option>
-                      {tiers.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.nome}
-                        </option>
-                      ))}
-                    </Select>
-                    <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
-                    <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
-                    <Button
-                      onClick={async () => {
-                        if (!editTier) {
-                          setEditError('Tier é obrigatório');
-                          return;
-                        }
-                        if (!editNome.trim()) {
-                          setEditError('Nome é obrigatório');
-                          return;
-                        }
-                        setEditError(null);
-                        const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
-                        await apiClient.updateCliente(c.id, { nome: editNome, tier_id: editTier, margin_meta: meta });
-                        setEditId(null);
-                        push({ type: 'success', message: 'Cliente atualizado' });
-                        load();
-                      }}
-                    >
-                      Salvar
-                    </Button>
-                    {editError && <span className="text-xs text-hangar-red">{editError}</span>}
-                    <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
-                  </div>
-                ) : (
-                  <>
-                    <span>{c.nome}</span>
-                    <span className="text-xs text-hangar-muted">{tiers.find((t) => t.id === c.tierId)?.nome ?? '—'}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="text-xs text-hangar-cyan"
-                        onClick={() => {
-                          setEditId(c.id);
-                          setEditNome(c.nome);
-                          setEditTier(c.tierId);
-                          setEditMarginMeta(c.marginMeta !== undefined && c.marginMeta !== null ? String(c.marginMeta) : '');
-                        }}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        className="text-xs text-hangar-red"
-                        onClick={async () => {
-                          if (!window.confirm('Excluir este cliente?')) return;
-                          await apiClient.deleteCliente(c.id);
-                          push({ type: 'success', message: 'Cliente excluído' });
-                          load();
-                        }}
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 overflow-x-auto text-xs md:text-sm">
+            <table className="w-full">
+              <thead className="text-left text-xs text-hangar-muted">
+                <tr>
+                  <th className="py-2">Cliente</th>
+                  <th className="py-2">Tier</th>
+                  <th className="py-2">Margin Meta</th>
+                  <th className="py-2">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((c) => (
+                  <tr key={c.id} className="border-t border-hangar-slate/20">
+                    {editId === c.id ? (
+                      <>
+                        <td className="py-2">
+                          <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                        </td>
+                        <td className="py-2">
+                          <Select value={editTier} onChange={(e) => setEditTier(e.target.value)}>
+                            <option value="">Selecione o Tier</option>
+                            {tiers.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.nome}
+                              </option>
+                            ))}
+                          </Select>
+                        </td>
+                        <td className="py-2">
+                          <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
+                        </td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={async () => {
+                                if (!editTier) {
+                                  setEditError('Tier é obrigatório');
+                                  return;
+                                }
+                                if (!editNome.trim()) {
+                                  setEditError('Nome é obrigatório');
+                                  return;
+                                }
+                                setEditError(null);
+                                const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
+                                await apiClient.updateCliente(c.id, { nome: editNome, tier_id: editTier, margin_meta: meta });
+                                setEditId(null);
+                                push({ type: 'success', message: 'Cliente atualizado' });
+                                load();
+                              }}
+                            >
+                              Salvar
+                            </Button>
+                            {editError && <span className="text-xs text-hangar-red">{editError}</span>}
+                            <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-2">{c.nome}</td>
+                        <td className="py-2 text-hangar-muted">{tiers.find((t) => t.id === c.tierId)?.nome ?? '—'}</td>
+                        <td className="py-2 text-hangar-muted">{formatPercent(c.marginMeta)}</td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-xs text-hangar-cyan"
+                              onClick={() => {
+                                setEditId(c.id);
+                                setEditNome(c.nome);
+                                setEditTier(c.tierId);
+                                setEditMarginMeta(c.marginMeta !== undefined && c.marginMeta !== null ? String(c.marginMeta) : '');
+                              }}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              className="text-xs text-hangar-red"
+                              onClick={async () => {
+                                if (!window.confirm('Excluir este cliente?')) return;
+                                await apiClient.deleteCliente(c.id);
+                                push({ type: 'success', message: 'Cliente excluído' });
+                                load();
+                              }}
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       </div>
     </div>
@@ -173,4 +198,9 @@ function Header({ title, description }: { title: string; description: string }) 
       <p className="text-xs text-hangar-muted">{description}</p>
     </div>
   );
+}
+
+function formatPercent(value?: number) {
+  if (value === undefined || value === null) return '--';
+  return `${Number(value).toFixed(1)}%`;
 }

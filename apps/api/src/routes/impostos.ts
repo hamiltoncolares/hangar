@@ -5,15 +5,27 @@ import { calcReceitaLiquida, toNumber } from '../utils.js';
 export async function impostosRoutes(app: FastifyInstance) {
   const prisma = getPrisma();
 
+  app.addHook('preHandler', app.authenticate);
+
   app.get('/impostos', async (req) => {
     const { projeto_id } = req.query as { projeto_id?: string };
+    if (req.user?.role !== 'admin') {
+      const allowed = req.userTierIds ?? [];
+      return prisma.imposto.findMany({
+        where: {
+          ...(projeto_id ? { projetoId: projeto_id } : {}),
+          projeto: { cliente: { tierId: { in: allowed } } }
+        },
+        orderBy: { vigenciaInicio: 'desc' }
+      });
+    }
     return prisma.imposto.findMany({
       where: projeto_id ? { projetoId: projeto_id } : undefined,
       orderBy: { vigenciaInicio: 'desc' }
     });
   });
 
-  app.post('/impostos', async (req) => {
+  app.post('/impostos', { preHandler: app.requireAdmin }, async (req) => {
     const body = req.body as {
       projeto_id?: string;
       percentual?: number;
@@ -39,10 +51,18 @@ export async function impostosRoutes(app: FastifyInstance) {
 
   app.get('/impostos/:id', async (req) => {
     const { id } = req.params as { id: string };
+    if (req.user?.role !== 'admin') {
+      const allowed = req.userTierIds ?? [];
+      const imposto = await prisma.imposto.findUnique({
+        where: { id },
+        include: { projeto: { include: { cliente: true } } }
+      });
+      if (!imposto || !allowed.includes(imposto.projeto.cliente.tierId)) throw new Error('forbidden');
+    }
     return prisma.imposto.findUnique({ where: { id } });
   });
 
-  app.patch('/impostos/:id', async (req) => {
+  app.patch('/impostos/:id', { preHandler: app.requireAdmin }, async (req) => {
     const { id } = req.params as { id: string };
     const body = req.body as {
       percentual?: number;
@@ -62,12 +82,12 @@ export async function impostosRoutes(app: FastifyInstance) {
     });
   });
 
-  app.delete('/impostos/:id', async (req) => {
+  app.delete('/impostos/:id', { preHandler: app.requireAdmin }, async (req) => {
     const { id } = req.params as { id: string };
     return prisma.imposto.delete({ where: { id } });
   });
 
-  app.post('/impostos/:id/recalcular', async (req) => {
+  app.post('/impostos/:id/recalcular', { preHandler: app.requireAdmin }, async (req) => {
     const { id } = req.params as { id: string };
     const body = req.body as { registros?: string[] };
     if (!body?.registros?.length) throw new Error('registros is required');

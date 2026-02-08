@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Area, Bar, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, Bar, ComposedChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { apiClient, DashboardResponse } from '../lib/api';
 
 export function DashboardPage({
@@ -49,6 +49,12 @@ export function DashboardPage({
   const displayPlanReal = decoratePlanReal(isQuarterly ? aggregateQuarterlyPlanReal(planRealSeries) : planRealSeries);
   const chartSeries = chartAccum ? accumulateSeries(displaySeries) : displaySeries;
   const chartPlanReal = chartAccum ? accumulatePlanReal(displayPlanReal) : displayPlanReal;
+
+  const clienteShare = data?.cliente_share ?? [];
+  const clienteShareColored = clienteShare.map((c, idx) => ({
+    ...c,
+    fill: shareColors[idx % shareColors.length]
+  }));
 
   return (
     <div className="px-6 py-6">
@@ -265,14 +271,51 @@ export function DashboardPage({
           </div>
         </div>
 
-        <div className="rounded-lg p-4 md:p-5 hud-panel">
-          <div className="text-base md:text-lg font-semibold hud-divider">Resumo do Ano</div>
-          <div className="mt-4 space-y-3 text-xs md:text-sm">
-            <SummaryRow label="Receita Bruta" value={totals?.receita_bruta} />
-            <SummaryRow label="Receita Líquida" value={totals?.receita_liquida} />
-            <SummaryRow label="Custo" value={totals?.custo} />
-            <SummaryRow label="Margem Bruta" value={totals?.margem_bruta} sub={percent(totals?.margem_bruta_pct)} />
-            <SummaryRow label="Margem Líquida" value={totals?.margem_liquida} sub={percent(totals?.margem_liquida_pct)} />
+        <div className="flex flex-col gap-6">
+          <div className="rounded-lg p-4 md:p-5 hud-panel">
+            <div className="text-base md:text-lg font-semibold hud-divider">Resumo do Ano</div>
+            <div className="mt-4 space-y-3 text-xs md:text-sm">
+              <SummaryRow label="Receita Bruta" value={totals?.receita_bruta} />
+              <SummaryRow label="Receita Líquida" value={totals?.receita_liquida} />
+              <SummaryRow label="Custo" value={totals?.custo} />
+              <SummaryRow label="Margem Bruta" value={totals?.margem_bruta} sub={percent(totals?.margem_bruta_pct)} />
+              <SummaryRow label="Margem Líquida" value={totals?.margem_liquida} sub={percent(totals?.margem_liquida_pct)} />
+            </div>
+          </div>
+
+          <div className="rounded-lg p-4 md:p-5 hud-panel">
+            <div className="text-base md:text-lg font-semibold hud-divider">Participação por Cliente</div>
+            <div className="mt-3 text-[10px] md:text-xs text-hangar-muted">
+              {tierId ? 'Dentro do Tier selecionado' : 'Todos os Tiers'}
+            </div>
+            <div className="mt-3 h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={clienteShareColored}
+                    dataKey="receita_bruta"
+                    nameKey="nome"
+                    innerRadius={50}
+                    outerRadius={78}
+                    paddingAngle={2}
+                    stroke="none"
+                  >
+                  </Pie>
+                  <Tooltip content={<ClienteShareTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-2 space-y-1 text-[10px] md:text-xs">
+              {clienteShare.slice(0, 5).map((c, idx) => (
+                <div key={c.id} className="flex items-center justify-between text-hangar-muted">
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ background: shareColors[idx % shareColors.length] }} />
+                    {c.nome}
+                  </span>
+                  <span>{currency(c.receita_bruta)} · {percent(c.pct)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -422,6 +465,23 @@ function Badge({ color, children }: { color: 'cyan' | 'purple' | 'orange' | 'gre
       ? 'bg-hangar-orange/15 text-hangar-orange'
       : 'bg-hangar-green/15 text-hangar-green';
   return <span className={`rounded-full px-2 py-0.5 text-[10px] ${c}`}>{children}</span>;
+}
+
+const shareColors = ['#00E5FF', '#7C4DFF', '#00E676', '#FF9100', '#C0C0C0', '#546E7A', '#FF1744'];
+
+function ClienteShareTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const data = payload[0]?.payload;
+  return (
+    <div className="rounded-md border border-hangar-slate/40 bg-hangar-panel/90 px-3 py-2 text-xs text-hangar-text hud-glow">
+      <div className="mb-1 text-hangar-muted">{data?.nome}</div>
+      <div className="flex items-center justify-between gap-3">
+        <span>Receita Bruta</span>
+        <span>{currency(data?.receita_bruta)}</span>
+      </div>
+      <div className="mt-1 text-hangar-muted">{percent(data?.pct)}</div>
+    </div>
+  );
 }
 
 function StatCard({

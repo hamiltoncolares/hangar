@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import jwt from '@fastify/jwt';
 import { tiersRoutes } from './routes/tiers.js';
 import { clientesRoutes } from './routes/clientes.js';
 import { projetosRoutes } from './routes/projetos.js';
@@ -7,6 +8,9 @@ import { impostosRoutes } from './routes/impostos.js';
 import { registrosRoutes } from './routes/registros.js';
 import { dashboardRoutes } from './routes/dashboard.js';
 import { exportRoutes } from './routes/export.js';
+import { authRoutes } from './routes/auth.js';
+import { adminRoutes } from './routes/admin.js';
+import { getPrisma } from './db.js';
 
 const app = Fastify({ logger: true });
 
@@ -22,6 +26,55 @@ await app.register(cors, {
   }
 });
 
+await app.register(jwt, {
+  secret: process.env.JWT_SECRET || 'dev-secret'
+});
+
+const prisma = getPrisma();
+
+app.decorate('authenticate', async (req: any, reply: any) => {
+  try {
+    await req.jwtVerify();
+  } catch {
+    reply.code(401).send({ error: 'unauthorized' });
+    return;
+  }
+
+  const payload = req.user as { id?: string };
+  if (!payload?.id) {
+    reply.code(401).send({ error: 'unauthorized' });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.id },
+    include: { tiers: true }
+  });
+  if (!user) {
+    reply.code(401).send({ error: 'unauthorized' });
+    return;
+  }
+  if (user.status !== 'active') {
+    reply.code(403).send({ error: 'forbidden' });
+    return;
+  }
+
+  req.user = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    name: user.name
+  };
+  req.userTierIds = user.tiers.map((t) => t.tierId);
+});
+
+app.decorate('requireAdmin', async (req: any, reply: any) => {
+  if (!req.user || req.user.role !== 'admin') {
+    return reply.code(403).send({ error: 'forbidden' });
+  }
+});
+
 app.setErrorHandler((err, _req, reply) => {
   const statusCode = err.statusCode && err.statusCode >= 400 ? err.statusCode : 400;
   reply.status(statusCode).send({ error: err.message || 'error' });
@@ -29,6 +82,8 @@ app.setErrorHandler((err, _req, reply) => {
 
 app.get('/health', async () => ({ ok: true }));
 
+app.register(authRoutes);
+app.register(adminRoutes);
 app.register(tiersRoutes);
 app.register(clientesRoutes);
 app.register(projetosRoutes);

@@ -14,13 +14,30 @@ export type DashboardResponse = {
   series_mensal: DashboardPoint[];
   totais: Omit<DashboardPoint, 'mes'>;
   planned_vs_realizado: Array<{ mes: string; planejado: number; realizado: number; custo_planejado: number; custo_realizado: number }>;
+  cliente_share: Array<{ id: string; nome: string; receita_bruta: number; pct: number }>;
 };
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const AUTH_KEY = 'hangar_token';
+let authToken = typeof window !== 'undefined' ? localStorage.getItem(AUTH_KEY) || '' : '';
+
+export function setAuthToken(token: string) {
+  authToken = token;
+  if (typeof window === 'undefined') return;
+  if (token) localStorage.setItem(AUTH_KEY, token);
+  else localStorage.removeItem(AUTH_KEY);
+}
+
+export function getAuthToken() {
+  return authToken;
+}
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+    },
     ...init
   });
   if (!res.ok) {
@@ -31,6 +48,36 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const apiClient = {
+  signup: (data: { email: string; password: string; name?: string }) =>
+    api<{ ok: boolean; user: { id: string; email: string; role: string; status: string; name?: string | null } }>(
+      '/auth/signup',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
+  login: (data: { email: string; password: string }) =>
+    api<{ token: string; user: { id: string; email: string; role: string; status: string; name?: string | null } }>(
+      '/auth/login',
+      { method: 'POST', body: JSON.stringify(data) }
+    ),
+  me: () =>
+    api<{ user: { id: string; email: string; role: string; status: string; name?: string | null } }>('/auth/me'),
+
+  listUsers: () =>
+    api<
+      Array<{
+        id: string;
+        email: string;
+        name?: string | null;
+        role: string;
+        status: string;
+        createdAt: string;
+        tiers: Array<{ id: string; nome: string }>;
+      }>
+    >('/admin/users'),
+  approveUser: (id: string) => api(`/admin/users/${id}/approve`, { method: 'POST' }),
+  promoteUser: (id: string) => api(`/admin/users/${id}/promote`, { method: 'POST' }),
+  setUserTiers: (id: string, tier_ids: string[]) =>
+    api(`/admin/users/${id}/tiers`, { method: 'PUT', body: JSON.stringify({ tier_ids }) }),
+
   getDashboard: (params: { tierId?: string; clienteId?: string; projetoId?: string; ano?: number; status?: string }) => {
     const q = new URLSearchParams();
     if (params.tierId) q.set('tier_id', params.tierId);
@@ -79,6 +126,7 @@ export const apiClient = {
     imposto_id: string;
     receita_liquida?: number;
     custo_projetado: number;
+    margin_meta?: number;
     status: 'planejado' | 'realizado';
     observacoes?: string;
   }) => api('/registros', { method: 'POST', body: JSON.stringify(data) })

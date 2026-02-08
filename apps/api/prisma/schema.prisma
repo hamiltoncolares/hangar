@@ -74,6 +74,7 @@ model RegistroMensal {
   imposto       Imposto  @relation(fields: [impostoId], references: [id])
   receitaLiquida Decimal @map("receita_liquida")
   custoProjetado Decimal @map("custo_projetado")
+  marginMeta    Decimal? @map("margin_meta")
   status        String
   observacoes   String?
   createdAt     DateTime @default(now()) @map("created_at")
@@ -81,4 +82,45 @@ model RegistroMensal {
 
   @@unique([projetoId, mesRef, status])
   @@map("registros_mensais")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String?
+  passwordHash String     @map("password_hash")
+  role         String     @default("user")
+  status       String     @default("pending")
+  tiers        UserTier[]
+  auditLogs    AuditLog[] @relation("AuditActor")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  lastLoginAt  DateTime?  @map("last_login_at")
+
+  @@map("users")
+}
+
+model UserTier {
+  id        String  @id @default(uuid())
+  userId    String  @map("user_id")
+  tierId    String  @map("tier_id")
+  user      User    @relation(fields: [userId], references: [id])
+  tier      Tier    @relation(fields: [tierId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, tierId])
+  @@map("user_tiers")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorId      String   @map("actor_id")
+  targetUserId String?  @map("target_user_id")
+  action       String
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  actor        User     @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@map("audit_logs")
 }

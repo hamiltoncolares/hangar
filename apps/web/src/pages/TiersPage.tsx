@@ -69,63 +69,85 @@ export function TiersPage() {
         </Panel>
         <Panel className="xl:col-span-2">
           <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
-          <ul className="mt-3 space-y-2 text-xs md:text-sm">
-            {items.map((t) => (
-              <li key={t.id} className="flex items-center justify-between border-b border-hangar-slate/20 pb-2">
-                {editId === t.id ? (
-                  <div className="flex w-full items-center gap-2">
-                    <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
-                    <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
-                    <Button
-                      onClick={async () => {
-                        if (!editNome.trim()) {
-                          setEditError('Nome é obrigatório');
-                          return;
-                        }
-                        setEditError(null);
-                        const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
-                        await apiClient.updateTier(t.id, { nome: editNome, margin_meta: meta });
-                        setEditId(null);
-                        push({ type: 'success', message: 'Tier atualizado' });
-                        load();
-                      }}
-                    >
-                      Salvar
-                    </Button>
-                    {editError && <span className="text-xs text-hangar-red">{editError}</span>}
-                    <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
-                  </div>
-                ) : (
-                  <>
-                    <span>{t.nome}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="text-xs text-hangar-cyan"
-                        onClick={() => {
-                          setEditId(t.id);
-                          setEditNome(t.nome);
-                          setEditMarginMeta(t.marginMeta !== undefined && t.marginMeta !== null ? String(t.marginMeta) : '');
-                        }}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        className="text-xs text-hangar-red"
-                        onClick={async () => {
-                          if (!window.confirm('Excluir este tier?')) return;
-                          await apiClient.deleteTier(t.id);
-                          push({ type: 'success', message: 'Tier excluído' });
-                          load();
-                        }}
-                      >
-                        Excluir
-                      </button>
-                    </div>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-3 overflow-x-auto text-xs md:text-sm">
+            <table className="w-full">
+              <thead className="text-left text-xs text-hangar-muted">
+                <tr>
+                  <th className="py-2">Tier</th>
+                  <th className="py-2">Margin Meta</th>
+                  <th className="py-2">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((t) => (
+                  <tr key={t.id} className="border-t border-hangar-slate/20">
+                    {editId === t.id ? (
+                      <>
+                        <td className="py-2">
+                          <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                        </td>
+                        <td className="py-2">
+                          <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
+                        </td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={async () => {
+                                if (!editNome.trim()) {
+                                  setEditError('Nome é obrigatório');
+                                  return;
+                                }
+                                setEditError(null);
+                                const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
+                                await apiClient.updateTier(t.id, { nome: editNome, margin_meta: meta });
+                                setEditId(null);
+                                push({ type: 'success', message: 'Tier atualizado' });
+                                load();
+                              }}
+                            >
+                              Salvar
+                            </Button>
+                            {editError && <span className="text-xs text-hangar-red">{editError}</span>}
+                            <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-2">{t.nome}</td>
+                        <td className="py-2 text-hangar-muted">{formatPercent(t.marginMeta)}</td>
+                        <td className="py-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-xs text-hangar-cyan"
+                              onClick={() => {
+                                setEditId(t.id);
+                                setEditNome(t.nome);
+                                setEditMarginMeta(t.marginMeta !== undefined && t.marginMeta !== null ? String(t.marginMeta) : '');
+                              }}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              className="text-xs text-hangar-red"
+                              onClick={async () => {
+                                if (!window.confirm('Excluir este tier?')) return;
+                                await apiClient.deleteTier(t.id);
+                                push({ type: 'success', message: 'Tier excluído' });
+                                load();
+                              }}
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       </div>
     </div>
@@ -139,4 +161,9 @@ function Header({ title, description }: { title: string; description: string }) 
       <p className="text-xs text-hangar-muted">{description}</p>
     </div>
   );
+}
+
+function formatPercent(value?: number) {
+  if (value === undefined || value === null) return '--';
+  return `${Number(value).toFixed(1)}%`;
 }

@@ -5,6 +5,8 @@ import { calcReceitaLiquida, parseMonth, toNumber } from '../utils.js';
 export async function registrosRoutes(app: FastifyInstance) {
   const prisma = getPrisma();
 
+  app.addHook('preHandler', app.authenticate);
+
   app.get('/registros', async (req) => {
     const { projeto_id, mes_ref, status } = req.query as {
       projeto_id?: string;
@@ -12,14 +14,28 @@ export async function registrosRoutes(app: FastifyInstance) {
       status?: string;
     };
 
-    return prisma.registroMensal.findMany({
+    const rows = await prisma.registroMensal.findMany({
       where: {
         projetoId: projeto_id,
         status: status,
-        mesRef: mes_ref ? parseMonth(mes_ref) : undefined
+        mesRef: mes_ref ? parseMonth(mes_ref) : undefined,
+        ...(req.user?.role !== 'admin'
+          ? {
+              projeto: {
+                cliente: { tierId: { in: req.userTierIds ?? [] } }
+              }
+            }
+          : {})
       },
       orderBy: { mesRef: 'desc' }
     });
+    return rows.map((r) => ({
+      ...r,
+      receitaBruta: Number(r.receitaBruta),
+      receitaLiquida: Number(r.receitaLiquida),
+      custoProjetado: Number(r.custoProjetado),
+      marginMeta: r.marginMeta !== null && r.marginMeta !== undefined ? Number(r.marginMeta) : null
+    }));
   });
 
   app.post('/registros', async (req) => {
@@ -30,6 +46,7 @@ export async function registrosRoutes(app: FastifyInstance) {
       imposto_id?: string;
       receita_liquida?: number;
       custo_projetado?: number;
+      margin_meta?: number;
       status?: string;
       observacoes?: string;
     };
@@ -43,6 +60,9 @@ export async function registrosRoutes(app: FastifyInstance) {
 
     const imposto = await prisma.imposto.findUnique({ where: { id: body.imposto_id } });
     if (!imposto) throw new Error('imposto not found');
+    const projeto = await prisma.projeto.findUnique({ where: { id: body.projeto_id } });
+    if (!projeto) throw new Error('projeto not found');
+    await assertProjetoAccess(req, prisma, body.projeto_id);
 
     if (body.status === 'realizado') {
       const existente = await prisma.registroMensal.findFirst({
@@ -69,6 +89,12 @@ export async function registrosRoutes(app: FastifyInstance) {
         impostoId: body.imposto_id,
         receitaLiquida,
         custoProjetado: toNumber(body.custo_projetado, 'custo_projetado'),
+        marginMeta:
+          body.margin_meta !== undefined
+            ? toNumber(body.margin_meta, 'margin_meta')
+            : projeto.marginMeta !== null && projeto.marginMeta !== undefined
+            ? Number(projeto.marginMeta)
+            : undefined,
         status: body.status,
         observacoes: body.observacoes
       }
@@ -89,12 +115,14 @@ export async function registrosRoutes(app: FastifyInstance) {
       imposto_id?: string;
       receita_liquida?: number;
       custo_projetado?: number;
+      margin_meta?: number;
       status?: string;
       observacoes?: string;
     };
 
     const atual = await prisma.registroMensal.findUnique({ where: { id } });
     if (!atual) throw new Error('registro not found');
+    await assertProjetoAccess(req, prisma, atual.projetoId);
 
     const receitaBruta = body.receita_bruta !== undefined
       ? toNumber(body.receita_bruta, 'receita_bruta')
@@ -105,6 +133,9 @@ export async function registrosRoutes(app: FastifyInstance) {
     if (!imposto) throw new Error('imposto not found');
 
     const nextProjetoId = body.projeto_id ?? atual.projetoId;
+    if (body.projeto_id && body.projeto_id !== atual.projetoId) {
+      await assertProjetoAccess(req, prisma, body.projeto_id);
+    }
     const nextMesRef = body.mes_ref ? parseMonth(body.mes_ref) : atual.mesRef;
     const nextStatus = body.status ?? atual.status;
 
@@ -136,6 +167,7 @@ export async function registrosRoutes(app: FastifyInstance) {
         impostoId: body.imposto_id,
         receitaLiquida,
         custoProjetado: body.custo_projetado !== undefined ? toNumber(body.custo_projetado, 'custo_projetado') : undefined,
+        marginMeta: body.margin_meta !== undefined ? toNumber(body.margin_meta, 'margin_meta') : undefined,
         status: body.status,
         observacoes: body.observacoes
       }
@@ -144,6 +176,21 @@ export async function registrosRoutes(app: FastifyInstance) {
 
   app.delete('/registros/:id', async (req) => {
     const { id } = req.params as { id: string };
+    const atual = await prisma.registroMensal.findUnique({ where: { id } });
+    if (!atual) throw new Error('registro not found');
+    await assertProjetoAccess(req, prisma, atual.projetoId);
     return prisma.registroMensal.delete({ where: { id } });
   });
+}
+
+async function assertProjetoAccess(req: any, prisma: any, projetoId: string) {
+  if (req.user?.role === 'admin') return;
+  const allowed = req.userTierIds ?? [];
+  const projeto = await prisma.projeto.findUnique({
+    where: { id: projetoId },
+    include: { cliente: true }
+  });
+  if (!projeto || !allowed.includes(projeto.cliente.tierId)) {
+    throw new Error('forbidden');
+  }
 }
