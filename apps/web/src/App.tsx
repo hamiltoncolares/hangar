@@ -20,6 +20,9 @@ export default function App() {
   const [tierId, setTierId] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [projetoId, setProjetoId] = useState('');
+  const [dashboardStatus, setDashboardStatus] = useState<'planejado' | 'realizado' | 'pipeline' | ''>('pipeline');
+  const [dashboardView, setDashboardView] = useState<'mensal' | 'trimestral'>('mensal');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const t = getInitialTheme();
@@ -49,12 +52,13 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-hangar-bg text-hangar-text">
-      <Sidebar active={active} onSelect={setActive} />
+      <Sidebar active={active} onSelect={setActive} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-1 flex-col">
         <Topbar
           theme={theme}
           title={activeTitle(active)}
           subtitle={activeSubtitle(active)}
+          onMenu={() => setSidebarOpen(true)}
           onToggleTheme={() => {
             const next = theme === 'dark' ? 'light' : 'dark';
             setTheme(next);
@@ -62,12 +66,12 @@ export default function App() {
           }}
         >
           {active === 'dashboard' && (
-            <div className="flex items-center gap-3 text-xs">
-            <select
-              value={String(year)}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
-            >
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <select
+                value={String(year)}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
+              >
                 {[year - 1, year, year + 1].map((y) => (
                   <option key={y} value={y}>
                     {y}
@@ -117,6 +121,23 @@ export default function App() {
                   </option>
                 ))}
               </select>
+              <select
+                value={dashboardStatus}
+                onChange={(e) => setDashboardStatus(e.target.value as any)}
+                className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
+              >
+                <option value="pipeline">Pipeline</option>
+                <option value="planejado">Planejado</option>
+                <option value="realizado">Realizado</option>
+              </select>
+              <select
+                value={dashboardView}
+                onChange={(e) => setDashboardView(e.target.value as any)}
+                className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
+              >
+                <option value="mensal">Mensal</option>
+                <option value="trimestral">Trimestral</option>
+              </select>
               <button
                 className="rounded-md border border-hangar-slate/40 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
                 onClick={async () => {
@@ -140,7 +161,7 @@ export default function App() {
         <main className="flex-1 bg-hangar-surface hud-surface">
           <div className="pointer-events-none fixed inset-y-0 right-0 hidden w-[70%] hud-grid xl:block" />
           {active === 'dashboard' && (
-            <DashboardPage tierId={tierId} clienteId={clienteId} projetoId={projetoId} ano={year} />
+            <DashboardPage tierId={tierId} clienteId={clienteId} projetoId={projetoId} ano={year} status={dashboardStatus} view={dashboardView} />
           )}
           {active === 'tiers' && <TiersPage />}
           {active === 'clientes' && <ClientesPage />}

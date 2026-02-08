@@ -29,12 +29,13 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const apiClient = {
-  getDashboard: (params: { tierId?: string; clienteId?: string; projetoId?: string; ano?: number }) => {
+  getDashboard: (params: { tierId?: string; clienteId?: string; projetoId?: string; ano?: number; status?: string }) => {
     const q = new URLSearchParams();
     if (params.tierId) q.set('tier_id', params.tierId);
     if (params.clienteId) q.set('cliente_id', params.clienteId);
     if (params.projetoId) q.set('projeto_id', params.projetoId);
     if (params.ano) q.set('ano', String(params.ano));
+    if (params.status) q.set('status', params.status);
     return api<DashboardResponse>(`/dashboard?${q.toString()}`);
   },
 

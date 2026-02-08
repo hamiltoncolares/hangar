@@ -102,6 +102,9 @@ h1, h2, h3, h4, h5 {
 }
 
 .hud-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background-image:
     linear-gradient(45deg, transparent 50%, rgba(0, 229, 255, 0.6) 50%),
     linear-gradient(135deg, rgba(0, 229, 255, 0.6) 50%, transparent 50%);
