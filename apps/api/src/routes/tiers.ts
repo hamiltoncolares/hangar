@@ -7,9 +7,9 @@ export async function tiersRoutes(app: FastifyInstance) {
   app.get('/tiers', async () => prisma.tier.findMany({ orderBy: { nome: 'asc' } }));
 
   app.post('/tiers', async (req) => {
-    const body = req.body as { nome?: string };
+    const body = req.body as { nome?: string; margin_meta?: number };
     if (!body?.nome) throw new Error('nome is required');
-    return prisma.tier.create({ data: { nome: body.nome } });
+    return prisma.tier.create({ data: { nome: body.nome, marginMeta: body.margin_meta ?? null } });
   });
 
   app.get('/tiers/:id', async (req) => {
@@ -19,8 +19,8 @@ export async function tiersRoutes(app: FastifyInstance) {
 
   app.patch('/tiers/:id', async (req) => {
     const { id } = req.params as { id: string };
-    const body = req.body as { nome?: string };
-    return prisma.tier.update({ where: { id }, data: { nome: body.nome } });
+    const body = req.body as { nome?: string; margin_meta?: number };
+    return prisma.tier.update({ where: { id }, data: { nome: body.nome, marginMeta: body.margin_meta } });
   });
 
   app.delete('/tiers/:id', async (req) => {

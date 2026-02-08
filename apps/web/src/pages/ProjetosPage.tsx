@@ -5,14 +5,16 @@ import { useToast } from '../components/Toast';
 
 export function ProjetosPage() {
   const [clientes, setClientes] = useState<Array<{ id: string; nome: string }>>([]);
-  const [items, setItems] = useState<Array<{ id: string; nome: string; clienteId: string; status: string }>>([]);
+  const [items, setItems] = useState<Array<{ id: string; nome: string; clienteId: string; status: string; marginMeta?: number }>>([]);
   const [nome, setNome] = useState('');
   const [clienteId, setClienteId] = useState('');
   const [status, setStatus] = useState('ativo');
+  const [marginMeta, setMarginMeta] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editNome, setEditNome] = useState('');
   const [editCliente, setEditCliente] = useState('');
   const [editStatus, setEditStatus] = useState('ativo');
+  const [editMarginMeta, setEditMarginMeta] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const { push } = useToast();
@@ -52,6 +54,12 @@ export function ProjetosPage() {
             placeholder="Nome do projeto"
             className="mt-3"
           />
+          <Input
+            value={marginMeta}
+            onChange={(e) => setMarginMeta(e.target.value)}
+            placeholder="Margin Meta (%)"
+            className="mt-3"
+          />
           {fieldError && <p className="mt-1 text-xs text-hangar-red">{fieldError}</p>}
           <Select
             value={status}
@@ -73,9 +81,11 @@ export function ProjetosPage() {
               }
               setFieldError(null);
               try {
-                await apiClient.createProjeto({ cliente_id: clienteId, nome, status });
+                const meta = marginMeta ? Number(marginMeta.replace(',', '.')) : undefined;
+                await apiClient.createProjeto({ cliente_id: clienteId, nome, status, margin_meta: meta });
                 setNome('');
                 setClienteId('');
+                setMarginMeta('');
                 push({ type: 'success', message: 'Projeto criado' });
                 load();
               } catch (e: any) {
@@ -107,6 +117,7 @@ export function ProjetosPage() {
                       <option value="ativo">Ativo</option>
                       <option value="pausado">Pausado</option>
                     </Select>
+                    <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
                     <Button
                       onClick={async () => {
                         if (!editCliente) {
@@ -118,7 +129,8 @@ export function ProjetosPage() {
                           return;
                         }
                         setEditError(null);
-                        await apiClient.updateProjeto(p.id, { nome: editNome, cliente_id: editCliente, status: editStatus });
+                        const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
+                        await apiClient.updateProjeto(p.id, { nome: editNome, cliente_id: editCliente, status: editStatus, margin_meta: meta });
                         setEditId(null);
                         push({ type: 'success', message: 'Projeto atualizado' });
                         load();
@@ -141,6 +153,7 @@ export function ProjetosPage() {
                           setEditNome(p.nome);
                           setEditCliente(p.clienteId);
                           setEditStatus(p.status);
+                          setEditMarginMeta(p.marginMeta !== undefined && p.marginMeta !== null ? String(p.marginMeta) : '');
                         }}
                       >
                         Editar

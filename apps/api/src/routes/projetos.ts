@@ -13,14 +13,15 @@ export async function projetosRoutes(app: FastifyInstance) {
   });
 
   app.post('/projetos', async (req) => {
-    const body = req.body as { cliente_id?: string; nome?: string; status?: string };
+    const body = req.body as { cliente_id?: string; nome?: string; status?: string; margin_meta?: number };
     if (!body?.cliente_id) throw new Error('cliente_id is required');
     if (!body?.nome) throw new Error('nome is required');
     return prisma.projeto.create({
       data: {
         clienteId: body.cliente_id,
         nome: body.nome,
-        status: body.status ?? 'ativo'
+        status: body.status ?? 'ativo',
+        marginMeta: body.margin_meta ?? null
       }
     });
   });
@@ -32,13 +33,14 @@ export async function projetosRoutes(app: FastifyInstance) {
 
   app.patch('/projetos/:id', async (req) => {
     const { id } = req.params as { id: string };
-    const body = req.body as { cliente_id?: string; nome?: string; status?: string };
+    const body = req.body as { cliente_id?: string; nome?: string; status?: string; margin_meta?: number };
     return prisma.projeto.update({
       where: { id },
       data: {
         clienteId: body.cliente_id,
         nome: body.nome,
-        status: body.status
+        status: body.status,
+        marginMeta: body.margin_meta
       }
     });
   });

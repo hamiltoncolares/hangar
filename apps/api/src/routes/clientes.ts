@@ -13,14 +13,15 @@ export async function clientesRoutes(app: FastifyInstance) {
   });
 
   app.post('/clientes', async (req) => {
-    const body = req.body as { tier_id?: string; nome?: string; logo_url?: string };
+    const body = req.body as { tier_id?: string; nome?: string; logo_url?: string; margin_meta?: number };
     if (!body?.tier_id) throw new Error('tier_id is required');
     if (!body?.nome) throw new Error('nome is required');
     return prisma.cliente.create({
       data: {
         tierId: body.tier_id,
         nome: body.nome,
-        logoUrl: body.logo_url
+        logoUrl: body.logo_url,
+        marginMeta: body.margin_meta ?? null
       }
     });
   });
@@ -32,13 +33,14 @@ export async function clientesRoutes(app: FastifyInstance) {
 
   app.patch('/clientes/:id', async (req) => {
     const { id } = req.params as { id: string };
-    const body = req.body as { tier_id?: string; nome?: string; logo_url?: string };
+    const body = req.body as { tier_id?: string; nome?: string; logo_url?: string; margin_meta?: number };
     return prisma.cliente.update({
       where: { id },
       data: {
         tierId: body.tier_id,
         nome: body.nome,
-        logoUrl: body.logo_url
+        logoUrl: body.logo_url,
+        marginMeta: body.margin_meta
       }
     });
   });

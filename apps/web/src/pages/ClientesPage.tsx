@@ -5,12 +5,14 @@ import { useToast } from '../components/Toast';
 
 export function ClientesPage() {
   const [tiers, setTiers] = useState<Array<{ id: string; nome: string }>>([]);
-  const [items, setItems] = useState<Array<{ id: string; nome: string; tierId: string }>>([]);
+  const [items, setItems] = useState<Array<{ id: string; nome: string; tierId: string; marginMeta?: number }>>([]);
   const [nome, setNome] = useState('');
   const [tierId, setTierId] = useState('');
+  const [marginMeta, setMarginMeta] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editNome, setEditNome] = useState('');
   const [editTier, setEditTier] = useState('');
+  const [editMarginMeta, setEditMarginMeta] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const { push } = useToast();
@@ -50,6 +52,12 @@ export function ClientesPage() {
             placeholder="Nome do cliente"
             className="mt-3"
           />
+          <Input
+            value={marginMeta}
+            onChange={(e) => setMarginMeta(e.target.value)}
+            placeholder="Margin Meta (%)"
+            className="mt-3"
+          />
           {fieldError && <p className="mt-1 text-xs text-hangar-red">{fieldError}</p>}
           <Button
             onClick={async () => {
@@ -63,9 +71,11 @@ export function ClientesPage() {
               }
               setFieldError(null);
               try {
-                await apiClient.createCliente({ tier_id: tierId, nome });
+                const meta = marginMeta ? Number(marginMeta.replace(',', '.')) : undefined;
+                await apiClient.createCliente({ tier_id: tierId, nome, margin_meta: meta });
                 setNome('');
                 setTierId('');
+                setMarginMeta('');
                 push({ type: 'success', message: 'Cliente criado' });
                 load();
               } catch (e: any) {
@@ -93,6 +103,7 @@ export function ClientesPage() {
                       ))}
                     </Select>
                     <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                    <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
                     <Button
                       onClick={async () => {
                         if (!editTier) {
@@ -104,7 +115,8 @@ export function ClientesPage() {
                           return;
                         }
                         setEditError(null);
-                        await apiClient.updateCliente(c.id, { nome: editNome, tier_id: editTier });
+                        const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
+                        await apiClient.updateCliente(c.id, { nome: editNome, tier_id: editTier, margin_meta: meta });
                         setEditId(null);
                         push({ type: 'success', message: 'Cliente atualizado' });
                         load();
@@ -126,6 +138,7 @@ export function ClientesPage() {
                           setEditId(c.id);
                           setEditNome(c.nome);
                           setEditTier(c.tierId);
+                          setEditMarginMeta(c.marginMeta !== undefined && c.marginMeta !== null ? String(c.marginMeta) : '');
                         }}
                       >
                         Editar

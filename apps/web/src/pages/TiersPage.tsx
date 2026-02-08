@@ -4,10 +4,12 @@ import { Button, Input, Panel } from '../components/ui';
 import { useToast } from '../components/Toast';
 
 export function TiersPage() {
-  const [items, setItems] = useState<Array<{ id: string; nome: string }>>([]);
+  const [items, setItems] = useState<Array<{ id: string; nome: string; marginMeta?: number }>>([]);
   const [nome, setNome] = useState('');
+  const [marginMeta, setMarginMeta] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
   const [editNome, setEditNome] = useState('');
+  const [editMarginMeta, setEditMarginMeta] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const { push } = useToast();
@@ -35,6 +37,12 @@ export function TiersPage() {
             placeholder="Nome do tier"
             className="mt-3"
           />
+          <Input
+            value={marginMeta}
+            onChange={(e) => setMarginMeta(e.target.value)}
+            placeholder="Margin Meta (%)"
+            className="mt-3"
+          />
           {fieldError && <p className="mt-1 text-xs text-hangar-red">{fieldError}</p>}
           <Button
             onClick={async () => {
@@ -44,8 +52,10 @@ export function TiersPage() {
               }
               setFieldError(null);
               try {
-                await apiClient.createTier({ nome });
+                const meta = marginMeta ? Number(marginMeta.replace(',', '.')) : undefined;
+                await apiClient.createTier({ nome, margin_meta: meta });
                 setNome('');
+                setMarginMeta('');
                 push({ type: 'success', message: 'Tier criado' });
                 load();
               } catch (e: any) {
@@ -65,6 +75,7 @@ export function TiersPage() {
                 {editId === t.id ? (
                   <div className="flex w-full items-center gap-2">
                     <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+                    <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(e.target.value)} placeholder="Margin Meta (%)" />
                     <Button
                       onClick={async () => {
                         if (!editNome.trim()) {
@@ -72,7 +83,8 @@ export function TiersPage() {
                           return;
                         }
                         setEditError(null);
-                        await apiClient.updateTier(t.id, { nome: editNome });
+                        const meta = editMarginMeta ? Number(editMarginMeta.replace(',', '.')) : undefined;
+                        await apiClient.updateTier(t.id, { nome: editNome, margin_meta: meta });
                         setEditId(null);
                         push({ type: 'success', message: 'Tier atualizado' });
                         load();
@@ -92,6 +104,7 @@ export function TiersPage() {
                         onClick={() => {
                           setEditId(t.id);
                           setEditNome(t.nome);
+                          setEditMarginMeta(t.marginMeta !== undefined && t.marginMeta !== null ? String(t.marginMeta) : '');
                         }}
                       >
                         Editar

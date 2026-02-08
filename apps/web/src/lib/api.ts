@@ -5,6 +5,7 @@ export type DashboardPoint = {
   custo: number;
   margem_bruta: number;
   margem_liquida: number;
+  margin_meta_pct: number;
   margem_bruta_pct: number;
   margem_liquida_pct: number;
 };
@@ -12,6 +13,7 @@ export type DashboardPoint = {
 export type DashboardResponse = {
   series_mensal: DashboardPoint[];
   totais: Omit<DashboardPoint, 'mes'>;
+  planned_vs_realizado: Array<{ mes: string; planejado: number; realizado: number; custo_planejado: number; custo_realizado: number }>;
 };
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
@@ -39,19 +41,19 @@ export const apiClient = {
     return api<DashboardResponse>(`/dashboard?${q.toString()}`);
   },
 
-  listTiers: () => api<Array<{ id: string; nome: string }>>('/tiers'),
-  createTier: (data: { nome: string }) => api('/tiers', { method: 'POST', body: JSON.stringify(data) }),
+  listTiers: () => api<Array<{ id: string; nome: string; marginMeta?: number }>>('/tiers'),
+  createTier: (data: { nome: string; margin_meta?: number }) => api('/tiers', { method: 'POST', body: JSON.stringify(data) }),
 
   listClientes: (tierId?: string) =>
-    api<Array<{ id: string; nome: string; tierId: string }>>(`/clientes${tierId ? `?tier_id=${tierId}` : ''}`),
-  createCliente: (data: { tier_id: string; nome: string }) =>
+    api<Array<{ id: string; nome: string; tierId: string; marginMeta?: number }>>(`/clientes${tierId ? `?tier_id=${tierId}` : ''}`),
+  createCliente: (data: { tier_id: string; nome: string; margin_meta?: number }) =>
     api('/clientes', { method: 'POST', body: JSON.stringify(data) }),
 
   listProjetos: (clienteId?: string) =>
-    api<Array<{ id: string; nome: string; clienteId: string; status: string }>>(
+    api<Array<{ id: string; nome: string; clienteId: string; status: string; marginMeta?: number }>>(
       `/projetos${clienteId ? `?cliente_id=${clienteId}` : ''}`
     ),
-  createProjeto: (data: { cliente_id: string; nome: string; status?: string }) =>
+  createProjeto: (data: { cliente_id: string; nome: string; status?: string; margin_meta?: number }) =>
     api('/projetos', { method: 'POST', body: JSON.stringify(data) }),
 
   listImpostos: (projetoId?: string) =>
@@ -81,15 +83,15 @@ export const apiClient = {
     observacoes?: string;
   }) => api('/registros', { method: 'POST', body: JSON.stringify(data) })
   ,
-  updateTier: (id: string, data: { nome?: string }) =>
+  updateTier: (id: string, data: { nome?: string; margin_meta?: number }) =>
     api(`/tiers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteTier: (id: string) => api(`/tiers/${id}`, { method: 'DELETE' }),
 
-  updateCliente: (id: string, data: { tier_id?: string; nome?: string }) =>
+  updateCliente: (id: string, data: { tier_id?: string; nome?: string; margin_meta?: number }) =>
     api(`/clientes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteCliente: (id: string) => api(`/clientes/${id}`, { method: 'DELETE' }),
 
-  updateProjeto: (id: string, data: { cliente_id?: string; nome?: string; status?: string }) =>
+  updateProjeto: (id: string, data: { cliente_id?: string; nome?: string; status?: string; margin_meta?: number }) =>
     api(`/projetos/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteProjeto: (id: string) => api(`/projetos/${id}`, { method: 'DELETE' }),
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, Bar, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { apiClient, DashboardResponse } from '../lib/api';
 
 export function DashboardPage({
@@ -7,16 +7,21 @@ export function DashboardPage({
   clienteId,
   projetoId,
   ano,
-  status
+  status,
+  view
 }: {
   tierId?: string;
   clienteId?: string;
   projetoId?: string;
   ano: number;
   status?: string;
+  view?: 'mensal' | 'trimestral';
 }) {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [highVis, setHighVis] = useState(false);
+  const [chartMode, setChartMode] = useState<'evolucao' | 'planreal'>('evolucao');
+  const [chartAccum, setChartAccum] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -38,6 +43,12 @@ export function DashboardPage({
 
   const totals = data?.totais;
   const series = data?.series_mensal ?? [];
+  const isQuarterly = view === 'trimestral';
+  const displaySeries = isQuarterly ? aggregateQuarterly(series) : series;
+  const planRealSeries = data?.planned_vs_realizado ?? [];
+  const displayPlanReal = decoratePlanReal(isQuarterly ? aggregateQuarterlyPlanReal(planRealSeries) : planRealSeries);
+  const chartSeries = chartAccum ? accumulateSeries(displaySeries) : displaySeries;
+  const chartPlanReal = chartAccum ? accumulatePlanReal(displayPlanReal) : displayPlanReal;
 
   return (
     <div className="px-6 py-6">
@@ -73,22 +84,72 @@ export function DashboardPage({
           </div>
           <div className="mb-4 flex items-center justify-between hud-divider">
             <div>
-              <div className="text-base md:text-lg font-semibold">Evolução Mensal</div>
-              <div className="text-[10px] md:text-xs text-hangar-muted">Receita e custo por mês</div>
+              <div className="text-base md:text-lg font-semibold">
+                {chartMode === 'planreal'
+                  ? isQuarterly
+                    ? 'Planejado vs Realizado (Trimestral)'
+                    : 'Planejado vs Realizado (Mensal)'
+                  : isQuarterly
+                  ? 'Evolução Trimestral'
+                  : 'Evolução Mensal'}
+              </div>
+              <div className="text-[10px] md:text-xs text-hangar-muted">
+                {chartMode === 'planreal'
+                  ? 'Comparativo de receita líquida'
+                  : isQuarterly
+                  ? 'Receita e custo por trimestre'
+                  : 'Receita e custo por mês'}
+              </div>
             </div>
-            <div className="text-[10px] md:text-xs text-hangar-muted">Ano {ano}</div>
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] md:text-xs text-hangar-muted">Ano {ano}</div>
+              <button
+                onClick={() => setChartAccum((v) => !v)}
+                className={`rounded-md border px-2 py-1 text-[10px] md:text-xs transition ${
+                  chartAccum
+                    ? 'border-hangar-orange/60 text-hangar-orange bg-hangar-orange/10'
+                    : 'border-hangar-slate/40 text-hangar-muted hover:bg-hangar-surface'
+                }`}
+              >
+                {chartAccum ? 'Mensal' : 'Acumulado'}
+              </button>
+              <button
+                onClick={() => setChartMode((v) => (v === 'evolucao' ? 'planreal' : 'evolucao'))}
+                className={`rounded-md border px-2 py-1 text-[10px] md:text-xs transition ${
+                  chartMode === 'planreal'
+                    ? 'border-hangar-cyan/60 text-hangar-cyan bg-hangar-cyan/10'
+                    : 'border-hangar-slate/40 text-hangar-muted hover:bg-hangar-surface'
+                }`}
+              >
+                {chartMode === 'planreal' ? 'Evolução' : 'Planejado vs Realizado'}
+              </button>
+            </div>
           </div>
-          <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] md:text-xs text-hangar-muted">
-            <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-6 rounded-full bg-hangar-purple"></span> Receita Líquida
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <span className="h-2 w-6 rounded-full bg-hangar-orange"></span> Custo
-            </span>
-          </div>
+          {chartMode === 'evolucao' ? (
+            <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] md:text-xs text-hangar-muted">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-6 rounded-full bg-hangar-purple"></span> Receita Líquida
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-6 rounded-full bg-hangar-orange"></span> Custo
+              </span>
+            </div>
+          ) : (
+            <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] md:text-xs text-hangar-muted">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-6 rounded-full bg-hangar-cyan"></span> Planejado
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-6 rounded-full bg-hangar-green"></span> Realizado
+              </span>
+            </div>
+          )}
           <div className="relative h-60 md:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={series} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <ComposedChart
+                data={chartMode === 'evolucao' ? chartSeries : chartPlanReal}
+                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="liquida" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#7C4DFF" stopOpacity={0.3} />
@@ -97,6 +158,14 @@ export function DashboardPage({
                   <linearGradient id="custo" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#FF9100" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#FF9100" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="plan" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#00E5FF" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="real" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00E676" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#00E676" stopOpacity={0} />
                   </linearGradient>
                   <filter id="glowOrange" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -112,27 +181,86 @@ export function DashboardPage({
                       <feMergeNode in="SourceGraphic" />
                     </feMerge>
                   </filter>
+                  <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                  <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                    <feMerge>
+                      <feMergeNode in="coloredBlur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
                 </defs>
                 <XAxis dataKey="mes" tick={{ fill: 'var(--hangar-muted)', fontSize: 10 }} />
                 <YAxis tick={{ fill: 'var(--hangar-muted)', fontSize: 10 }} />
-                <Tooltip content={<HudTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="receita_liquida"
-                  stroke="#7C4DFF"
-                  fill="url(#liquida)"
-                  strokeWidth={2.5}
-                  filter="url(#glowPurple)"
+                <Tooltip
+                  content={
+                    chartMode === 'evolucao'
+                      ? <HudTooltip labelTitle={isQuarterly ? 'Trimestre' : 'Mês'} />
+                      : <PlanRealTooltip labelTitle={isQuarterly ? 'Trimestre' : 'Mês'} />
+                  }
                 />
-                <Area
-                  type="monotone"
-                  dataKey="custo"
-                  stroke="#FF9100"
-                  fill="url(#custo)"
-                  strokeWidth={2.5}
-                  filter="url(#glowOrange)"
-                />
-              </AreaChart>
+                {chartMode === 'evolucao' ? (
+                  <>
+                    <Area
+                      type="monotone"
+                      dataKey="receita_liquida"
+                      stroke="#7C4DFF"
+                      fill="url(#liquida)"
+                      strokeWidth={2.5}
+                      filter="url(#glowPurple)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="custo"
+                      stroke="#FF9100"
+                      fill="url(#custo)"
+                      strokeWidth={2.5}
+                      filter="url(#glowOrange)"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Bar
+                      dataKey="margem_planejada"
+                      fill="rgba(0,229,255,0.35)"
+                      stroke="#00E5FF"
+                      strokeWidth={1.2}
+                      radius={[6, 6, 0, 0]}
+                      barSize={10}
+                      filter="url(#glowCyan)"
+                    />
+                    <Bar
+                      dataKey="margem_realizada"
+                      fill="rgba(0,230,118,0.35)"
+                      stroke="#00E676"
+                      strokeWidth={1.2}
+                      radius={[6, 6, 0, 0]}
+                      barSize={10}
+                      filter="url(#glowGreen)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="planejado"
+                      stroke="#00E5FF"
+                      fill="url(#plan)"
+                      strokeWidth={2.5}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="realizado"
+                      stroke="#00E676"
+                      fill="url(#real)"
+                      strokeWidth={2.5}
+                    />
+                  </>
+                )}
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -150,12 +278,26 @@ export function DashboardPage({
       </div>
 
       <div className="mt-6 rounded-lg p-4 md:p-5 hud-panel enter">
-        <div className="mb-3 text-base md:text-lg font-semibold hud-divider">Tabela Mensal</div>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="text-base md:text-lg font-semibold hud-divider">
+            {isQuarterly ? 'Tabela Trimestral' : 'Tabela Mensal'}
+          </div>
+          <button
+            onClick={() => setHighVis((v) => !v)}
+            className={`rounded-md border px-3 py-1 text-[11px] md:text-xs transition ${
+              highVis
+                ? 'border-hangar-cyan/60 text-hangar-cyan bg-hangar-cyan/10'
+                : 'border-hangar-slate/40 text-hangar-muted hover:bg-hangar-surface'
+            }`}
+          >
+            HighVis
+          </button>
+        </div>
         <div className="hidden md:block overflow-x-auto text-xs md:text-sm">
           <table className="w-full">
             <thead className="text-left text-xs text-hangar-muted">
               <tr>
-                <th className="py-2">Mês</th>
+                <th className="py-2">{isQuarterly ? 'Trimestre' : 'Mês'}</th>
                 <th className="py-2">Receita Bruta</th>
                 <th className="py-2">Receita Líquida</th>
                 <th className="py-2">Custo</th>
@@ -164,8 +306,13 @@ export function DashboardPage({
               </tr>
             </thead>
             <tbody>
-              {series.map((s) => (
-                <tr key={s.mes} className="border-t border-hangar-slate/20 odd:bg-hangar-surface/40 hover:bg-hangar-surface/70 transition">
+              {displaySeries.map((s) => (
+                <tr
+                  key={s.mes}
+                  className={`border-t border-hangar-slate/20 odd:bg-hangar-surface/40 hover:bg-hangar-surface/70 transition ${
+                    highVis && s.margem_liquida_pct < 0.1 ? 'bg-hangar-red/10 text-hangar-red' : ''
+                  } ${s.margin_meta_pct && s.margem_liquida_pct < s.margin_meta_pct ? 'bg-hangar-orange/10 text-hangar-orange' : ''}`}
+                >
                   <td className="py-2 text-hangar-muted">{s.mes}</td>
                   <td className="py-2">{currency(s.receita_bruta)}</td>
                   <td className="py-2">{currency(s.receita_liquida)}</td>
@@ -179,8 +326,13 @@ export function DashboardPage({
         </div>
 
         <div className="md:hidden space-y-3 text-xs">
-          {series.map((s) => (
-            <details key={s.mes} className="rounded-md border border-hangar-slate/30 bg-hangar-surface/40 p-3">
+          {displaySeries.map((s) => (
+            <details
+              key={s.mes}
+              className={`rounded-md border border-hangar-slate/30 bg-hangar-surface/40 p-3 ${
+                highVis && s.margem_liquida_pct < 0.1 ? 'bg-hangar-red/10 text-hangar-red' : ''
+              } ${s.margin_meta_pct && s.margem_liquida_pct < s.margin_meta_pct ? 'bg-hangar-orange/10 text-hangar-orange' : ''}`}
+            >
               <summary className="cursor-pointer list-none text-hangar-muted">{s.mes}</summary>
               <div className="mt-2 space-y-1">
                 <Row label="Receita Bruta" value={currency(s.receita_bruta)} />
@@ -207,13 +359,13 @@ function percent(value?: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function HudTooltip({ active, payload, label }: any) {
+function HudTooltip({ active, payload, label, labelTitle }: any) {
   if (!active || !payload?.length) return null;
   const data = payload[0]?.payload;
   return (
     <div className="rounded-md border border-hangar-slate/40 bg-hangar-panel/90 px-3 py-2 text-xs text-hangar-text hud-glow">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="text-hangar-muted">Mês</div>
+        <div className="text-hangar-muted">{labelTitle ?? 'Mês'}</div>
         <div>{label}</div>
       </div>
       <div className="flex items-center justify-between gap-3">
@@ -231,13 +383,44 @@ function HudTooltip({ active, payload, label }: any) {
   );
 }
 
-function Badge({ color, children }: { color: 'cyan' | 'purple' | 'orange'; children: string }) {
+function PlanRealTooltip({ active, payload, label, labelTitle }: any) {
+  if (!active || !payload?.length) return null;
+  const data = payload[0]?.payload;
+  return (
+    <div className="rounded-md border border-hangar-slate/40 bg-hangar-panel/90 px-3 py-2 text-xs text-hangar-text hud-glow">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="text-hangar-muted">{labelTitle ?? 'Mês'}</div>
+        <div>{label}</div>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <Badge color="cyan">Planejado</Badge>
+        <div>{currency(data.planejado)}</div>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <Badge color="green">Realizado</Badge>
+        <div>{currency(data.realizado)}</div>
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <Badge color="cyan">Margem P.</Badge>
+        <div>{percent(data.margem_planejada_pct)}</div>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <Badge color="green">Margem R.</Badge>
+        <div>{percent(data.margem_realizada_pct)}</div>
+      </div>
+    </div>
+  );
+}
+
+function Badge({ color, children }: { color: 'cyan' | 'purple' | 'orange' | 'green'; children: string }) {
   const c =
     color === 'cyan'
       ? 'bg-hangar-cyan/15 text-hangar-cyan'
       : color === 'purple'
       ? 'bg-hangar-purple/15 text-hangar-purple'
-      : 'bg-hangar-orange/15 text-hangar-orange';
+      : color === 'orange'
+      ? 'bg-hangar-orange/15 text-hangar-orange'
+      : 'bg-hangar-green/15 text-hangar-green';
   return <span className={`rounded-full px-2 py-0.5 text-[10px] ${c}`}>{children}</span>;
 }
 
@@ -289,4 +472,121 @@ function Row({ label, value }: { label: string; value: string }) {
       <div>{value}</div>
     </div>
   );
+}
+
+function aggregateQuarterly(series: Array<{ mes: string; receita_bruta: number; receita_liquida: number; custo: number; margem_bruta: number; margem_liquida: number; margin_meta_pct: number; margem_bruta_pct: number; margem_liquida_pct: number; }>) {
+  const quarters = [
+    { label: 'Q1', months: ['01', '02', '03'] },
+    { label: 'Q2', months: ['04', '05', '06'] },
+    { label: 'Q3', months: ['07', '08', '09'] },
+    { label: 'Q4', months: ['10', '11', '12'] }
+  ];
+
+  return quarters.map((q) => {
+    const rows = series.filter((s) => q.months.includes(s.mes.slice(5)));
+    const receita_bruta = rows.reduce((a, r) => a + r.receita_bruta, 0);
+    const receita_liquida = rows.reduce((a, r) => a + r.receita_liquida, 0);
+    const custo = rows.reduce((a, r) => a + r.custo, 0);
+    const margem_bruta = receita_bruta - custo;
+    const margem_liquida = receita_liquida - custo;
+    const meta_base = rows.reduce((a, r) => a + r.receita_liquida, 0);
+    const meta_sum = rows.reduce((a, r) => a + r.margin_meta_pct * r.receita_liquida, 0);
+    const margin_meta_pct = meta_base > 0 ? meta_sum / meta_base : 0;
+    return {
+      mes: q.label,
+      receita_bruta,
+      receita_liquida,
+      custo,
+      margem_bruta,
+      margem_liquida,
+      margin_meta_pct,
+      margem_bruta_pct: receita_bruta > 0 ? margem_bruta / receita_bruta : 0,
+      margem_liquida_pct: receita_liquida > 0 ? margem_liquida / receita_liquida : 0
+    };
+  });
+}
+
+function aggregateQuarterlyPlanReal(series: Array<{ mes: string; planejado: number; realizado: number; custo_planejado: number; custo_realizado: number; margem_planejada: number; margem_realizada: number; margem_planejada_pct: number; margem_realizada_pct: number }>) {
+  const quarters = [
+    { label: 'Q1', months: ['01', '02', '03'] },
+    { label: 'Q2', months: ['04', '05', '06'] },
+    { label: 'Q3', months: ['07', '08', '09'] },
+    { label: 'Q4', months: ['10', '11', '12'] }
+  ];
+
+  return quarters.map((q) => {
+    const rows = series.filter((s) => q.months.includes(s.mes.slice(5)));
+    const planejado = rows.reduce((a, r) => a + r.planejado, 0);
+    const realizado = rows.reduce((a, r) => a + r.realizado, 0);
+    const custo_planejado = rows.reduce((a, r) => a + r.custo_planejado, 0);
+    const custo_realizado = rows.reduce((a, r) => a + r.custo_realizado, 0);
+    return {
+      mes: q.label,
+      planejado,
+      realizado,
+      custo_planejado,
+      custo_realizado,
+      margem_planejada: planejado - custo_planejado,
+      margem_realizada: realizado - custo_realizado,
+      margem_planejada_pct: planejado > 0 ? (planejado - custo_planejado) / planejado : 0,
+      margem_realizada_pct: realizado > 0 ? (realizado - custo_realizado) / realizado : 0
+    };
+  });
+}
+
+function accumulateSeries(series: Array<{ mes: string; receita_bruta: number; receita_liquida: number; custo: number; margem_bruta: number; margem_liquida: number; margin_meta_pct: number; margem_bruta_pct: number; margem_liquida_pct: number; }>) {
+  let receita_bruta = 0;
+  let receita_liquida = 0;
+  let custo = 0;
+  return series.map((s) => {
+    receita_bruta += s.receita_bruta;
+    receita_liquida += s.receita_liquida;
+    custo += s.custo;
+    const margem_bruta = receita_bruta - custo;
+    const margem_liquida = receita_liquida - custo;
+    return {
+      ...s,
+      receita_bruta,
+      receita_liquida,
+      custo,
+      margem_bruta,
+      margem_liquida,
+      margem_bruta_pct: receita_bruta > 0 ? margem_bruta / receita_bruta : 0,
+      margem_liquida_pct: receita_liquida > 0 ? margem_liquida / receita_liquida : 0
+    };
+  });
+}
+
+function accumulatePlanReal(series: Array<{ mes: string; planejado: number; realizado: number; custo_planejado: number; custo_realizado: number; margem_planejada: number; margem_realizada: number; margem_planejada_pct: number; margem_realizada_pct: number }>) {
+  let planejado = 0;
+  let realizado = 0;
+  let custo_planejado = 0;
+  let custo_realizado = 0;
+  return series.map((s) => {
+    planejado += s.planejado;
+    realizado += s.realizado;
+    custo_planejado += s.custo_planejado;
+    custo_realizado += s.custo_realizado;
+    return {
+      ...s,
+      planejado,
+      realizado,
+      custo_planejado,
+      custo_realizado,
+      margem_planejada: planejado - custo_planejado,
+      margem_realizada: realizado - custo_realizado,
+      margem_planejada_pct: planejado > 0 ? (planejado - custo_planejado) / planejado : 0,
+      margem_realizada_pct: realizado > 0 ? (realizado - custo_realizado) / realizado : 0
+    };
+  });
+}
+
+function decoratePlanReal(series: Array<{ mes: string; planejado: number; realizado: number; custo_planejado: number; custo_realizado: number }>) {
+  return series.map((s) => ({
+    ...s,
+    margem_planejada: s.planejado - s.custo_planejado,
+    margem_realizada: s.realizado - s.custo_realizado,
+    margem_planejada_pct: s.planejado > 0 ? (s.planejado - s.custo_planejado) / s.planejado : 0,
+    margem_realizada_pct: s.realizado > 0 ? (s.realizado - s.custo_realizado) / s.realizado : 0
+  }));
 }

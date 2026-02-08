@@ -26,12 +26,28 @@ export async function dashboardRoutes(app: FastifyInstance) {
       where: {
         mesRef: { gte: start, lt: end },
         ...(Object.keys(projetoWhere).length ? { projeto: projetoWhere } : {})
+      },
+      include: {
+        projeto: {
+          select: {
+            marginMeta: true,
+            cliente: {
+              select: {
+                marginMeta: true,
+                tier: { select: { marginMeta: true } }
+              }
+            }
+          }
+        }
       }
     });
 
+    const planned_vs_realizado = buildPlannedVsRealizado(registros, year);
+
     if (status === 'planejado' || status === 'realizado') {
       const filtered = registros.filter((r) => r.status === status);
-      return buildResponse(filtered, year);
+      const base = buildResponse(filtered, year);
+      return { ...base, planned_vs_realizado };
     }
 
     // Pipeline (default): se houver realizado, usa ele. Se houver múltiplos planejados, usa o mais recente.
@@ -58,7 +74,8 @@ export async function dashboardRoutes(app: FastifyInstance) {
       if (r.updatedAt > current.updatedAt) byKey.set(key, r);
     }
 
-    return buildResponse(Array.from(byKey.values()), year);
+    const base = buildResponse(Array.from(byKey.values()), year);
+    return { ...base, planned_vs_realizado };
 
     const series_mensal = Array.from({ length: 12 }).map((_, idx) => {
       const month = idx + 1;
@@ -104,14 +121,20 @@ export async function dashboardRoutes(app: FastifyInstance) {
 }
 
 function buildResponse(registros: Array<any>, year: number) {
-  const byMonth = new Map<number, { receita_bruta: number; receita_liquida: number; custo: number }>();
+  const byMonth = new Map<number, { receita_bruta: number; receita_liquida: number; custo: number; meta_sum: number; meta_base: number }>();
   for (const r of registros) {
     const m = r.mesRef.getUTCMonth() + 1;
-    const prev = byMonth.get(m) ?? { receita_bruta: 0, receita_liquida: 0, custo: 0 };
+    const prev = byMonth.get(m) ?? { receita_bruta: 0, receita_liquida: 0, custo: 0, meta_sum: 0, meta_base: 0 };
+    const receitaLiquida = Number(r.receitaLiquida);
+    const marginMetaRaw =
+      r.projeto?.marginMeta ?? r.projeto?.cliente?.marginMeta ?? r.projeto?.cliente?.tier?.marginMeta;
+    const marginMeta = marginMetaRaw !== null && marginMetaRaw !== undefined ? Number(marginMetaRaw) : undefined;
     byMonth.set(m, {
       receita_bruta: prev.receita_bruta + Number(r.receitaBruta),
-      receita_liquida: prev.receita_liquida + Number(r.receitaLiquida),
-      custo: prev.custo + Number(r.custoProjetado)
+      receita_liquida: prev.receita_liquida + receitaLiquida,
+      custo: prev.custo + Number(r.custoProjetado),
+      meta_sum: prev.meta_sum + (marginMeta !== undefined ? (marginMeta / 100) * receitaLiquida : 0),
+      meta_base: prev.meta_base + (marginMeta !== undefined ? receitaLiquida : 0)
     });
   }
 
@@ -123,6 +146,7 @@ function buildResponse(registros: Array<any>, year: number) {
     const custo = r ? r.custo : 0;
     const margem_bruta = receita_bruta - custo;
     const margem_liquida = receita_liquida - custo;
+    const margin_meta_pct = r && r.meta_base > 0 ? r.meta_sum / r.meta_base : 0;
 
     return {
       mes: `${year}-${String(month).padStart(2, '0')}`,
@@ -131,6 +155,7 @@ function buildResponse(registros: Array<any>, year: number) {
       custo,
       margem_bruta,
       margem_liquida,
+      margin_meta_pct,
       margem_bruta_pct: receita_bruta > 0 ? margem_bruta / receita_bruta : 0,
       margem_liquida_pct: receita_liquida > 0 ? margem_liquida / receita_liquida : 0
     };
@@ -155,4 +180,52 @@ function buildResponse(registros: Array<any>, year: number) {
   };
 
   return { series_mensal, totais };
+}
+
+function buildPlannedVsRealizado(registros: Array<any>, year: number) {
+  const byKey = new Map<string, { planejado?: any; realizado?: any }>();
+  for (const r of registros) {
+    const key = `${r.projetoId}-${r.mesRef.getUTCFullYear()}-${String(r.mesRef.getUTCMonth() + 1).padStart(2, '0')}`;
+    const current = byKey.get(key) ?? {};
+    if (r.status === 'realizado') {
+      if (!current.realizado || r.updatedAt > current.realizado.updatedAt) {
+        current.realizado = r;
+      }
+    } else {
+      if (!current.planejado || r.updatedAt > current.planejado.updatedAt) {
+        current.planejado = r;
+      }
+    }
+    byKey.set(key, current);
+  }
+
+  const byMonth = new Map<number, { planejado: number; realizado: number; custoPlanejado: number; custoRealizado: number; hasRealizado: boolean }>();
+  for (const v of byKey.values()) {
+    const ref = (v.realizado ?? v.planejado)?.mesRef;
+    if (!ref) continue;
+    const m = ref.getUTCMonth() + 1;
+    const prev = byMonth.get(m) ?? { planejado: 0, realizado: 0, custoPlanejado: 0, custoRealizado: 0, hasRealizado: false };
+    const realizadoValue = v.realizado ? Number(v.realizado.receitaLiquida) : 0;
+    byMonth.set(m, {
+      planejado: prev.planejado + (v.planejado ? Number(v.planejado.receitaLiquida) : 0),
+      realizado: prev.realizado + realizadoValue,
+      custoPlanejado: prev.custoPlanejado + (v.planejado ? Number(v.planejado.custoProjetado) : 0),
+      custoRealizado: prev.custoRealizado + (v.realizado ? Number(v.realizado.custoProjetado) : 0),
+      hasRealizado: prev.hasRealizado || realizadoValue > 0
+    });
+  }
+
+  return Array.from({ length: 12 }).map((_, idx) => {
+    const month = idx + 1;
+    const r = byMonth.get(month) ?? { planejado: 0, realizado: 0, custoPlanejado: 0, custoRealizado: 0, hasRealizado: false };
+    const realizado = r.hasRealizado ? r.realizado : r.planejado;
+    const custoRealizado = r.hasRealizado ? r.custoRealizado : r.custoPlanejado;
+    return {
+      mes: `${year}-${String(month).padStart(2, '0')}`,
+      planejado: r.planejado,
+      realizado,
+      custo_planejado: r.custoPlanejado,
+      custo_realizado: custoRealizado
+    };
+  });
 }
