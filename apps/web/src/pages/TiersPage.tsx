@@ -28,7 +28,7 @@ export function TiersPage() {
 
       <div className="grid gap-6 xl:grid-cols-3 enter">
         <Panel>
-          <h3 className="text-sm font-semibold">Novo Tier</h3>
+          <h3 className="text-xs md:text-sm font-semibold">Novo Tier</h3>
           <Input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
@@ -58,8 +58,8 @@ export function TiersPage() {
           </Button>
         </Panel>
         <Panel className="xl:col-span-2">
-          <h3 className="text-sm font-semibold">Lista</h3>
-          <ul className="mt-3 space-y-2 text-sm">
+          <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
+          <ul className="mt-3 space-y-2 text-xs md:text-sm">
             {items.map((t) => (
               <li key={t.id} className="flex items-center justify-between border-b border-hangar-slate/20 pb-2">
                 {editId === t.id ? (

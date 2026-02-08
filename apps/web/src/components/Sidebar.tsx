@@ -6,7 +6,17 @@ export type NavItem = {
   label: string;
 };
 
-export function Sidebar({ active, onSelect }: { active: string; onSelect: (key: string) => void }) {
+export function Sidebar({
+  active,
+  onSelect,
+  open,
+  onClose
+}: {
+  active: string;
+  onSelect: (key: string) => void;
+  open: boolean;
+  onClose: () => void;
+}) {
   const items: NavItem[] = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'tiers', label: 'Tiers' },
@@ -17,7 +27,16 @@ export function Sidebar({ active, onSelect }: { active: string; onSelect: (key: 
   ];
 
   return (
-    <aside className="flex h-full w-64 flex-col gap-6 border-r border-hangar-slate/30 bg-hangar-panel px-5 py-6">
+    <>
+      <div
+        className={`fixed inset-0 z-30 bg-black/40 transition md:hidden ${open ? 'block' : 'hidden'}`}
+        onClick={onClose}
+      />
+      <aside
+        className={`fixed z-40 flex h-full w-64 flex-col gap-6 border-r border-hangar-slate/30 bg-hangar-panel px-5 py-6 transition md:static md:translate-x-0 ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
       <div className="flex items-center gap-3">
         <img src={logoLight} alt="Hangar" className="h-10 w-10 dark:hidden" />
         <img src={logoDark} alt="Hangar" className="hidden h-10 w-10 dark:block" />
@@ -31,7 +50,10 @@ export function Sidebar({ active, onSelect }: { active: string; onSelect: (key: 
         {items.map((item) => (
           <button
             key={item.key}
-            onClick={() => onSelect(item.key)}
+            onClick={() => {
+              onSelect(item.key);
+              onClose();
+            }}
             className={`rounded-md px-3 py-2 text-left text-sm transition ${
               active === item.key
                 ? 'bg-hangar-accent text-white shadow-sm'
@@ -47,5 +69,6 @@ export function Sidebar({ active, onSelect }: { active: string; onSelect: (key: 
         MVP • v0.1
       </div>
     </aside>
+    </>
   );
 }

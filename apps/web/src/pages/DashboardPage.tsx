@@ -6,12 +6,14 @@ export function DashboardPage({
   tierId,
   clienteId,
   projetoId,
-  ano
+  ano,
+  status
 }: {
   tierId?: string;
   clienteId?: string;
   projetoId?: string;
   ano: number;
+  status?: string;
 }) {
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ export function DashboardPage({
   useEffect(() => {
     let mounted = true;
     apiClient
-      .getDashboard({ tierId, clienteId, projetoId, ano })
+      .getDashboard({ tierId, clienteId, projetoId, ano, status })
       .then((res) => {
         if (!mounted) return;
         setData(res);
@@ -32,7 +34,7 @@ export function DashboardPage({
     return () => {
       mounted = false;
     };
-  }, [tierId, clienteId, projetoId, ano]);
+  }, [tierId, clienteId, projetoId, ano, status]);
 
   const totals = data?.totais;
   const series = data?.series_mensal ?? [];
@@ -45,7 +47,7 @@ export function DashboardPage({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5 enter">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-2 xl:grid-cols-5 enter">
         <StatCard label="Receita Bruta" value={totals?.receita_bruta} accent="cyan" glow />
         <StatCard label="Receita Líquida" value={totals?.receita_liquida} accent="purple" glow />
         <StatCard label="Custo" value={totals?.custo} accent="orange" />
@@ -63,20 +65,20 @@ export function DashboardPage({
         />
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-3 enter-delay">
-        <div className="xl:col-span-2 rounded-lg p-5 hud-panel relative overflow-hidden">
+      <div className="mt-6 grid gap-6 grid-cols-1 xl:grid-cols-3 enter-delay">
+        <div className="xl:col-span-2 rounded-lg p-4 md:p-5 hud-panel relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 opacity-60">
             <div className="absolute inset-0 hud-grid" />
             <div className="absolute inset-0 bg-gradient-to-b from-hangar-accent/20 via-transparent to-transparent" />
           </div>
           <div className="mb-4 flex items-center justify-between hud-divider">
             <div>
-              <div className="text-lg font-semibold">Evolução Mensal</div>
-              <div className="text-xs text-hangar-muted">Receita e custo por mês</div>
+              <div className="text-base md:text-lg font-semibold">Evolução Mensal</div>
+              <div className="text-[10px] md:text-xs text-hangar-muted">Receita e custo por mês</div>
             </div>
-            <div className="text-xs text-hangar-muted">Ano {ano}</div>
+            <div className="text-[10px] md:text-xs text-hangar-muted">Ano {ano}</div>
           </div>
-          <div className="mb-3 flex items-center gap-4 text-xs text-hangar-muted">
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] md:text-xs text-hangar-muted">
             <span className="inline-flex items-center gap-2">
               <span className="h-2 w-6 rounded-full bg-hangar-purple"></span> Receita Líquida
             </span>
@@ -84,7 +86,7 @@ export function DashboardPage({
               <span className="h-2 w-6 rounded-full bg-hangar-orange"></span> Custo
             </span>
           </div>
-          <div className="relative h-72">
+          <div className="relative h-60 md:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                 <defs>
@@ -135,9 +137,9 @@ export function DashboardPage({
           </div>
         </div>
 
-        <div className="rounded-lg p-5 hud-panel">
-          <div className="text-lg font-semibold hud-divider">Resumo do Ano</div>
-          <div className="mt-4 space-y-3 text-sm">
+        <div className="rounded-lg p-4 md:p-5 hud-panel">
+          <div className="text-base md:text-lg font-semibold hud-divider">Resumo do Ano</div>
+          <div className="mt-4 space-y-3 text-xs md:text-sm">
             <SummaryRow label="Receita Bruta" value={totals?.receita_bruta} />
             <SummaryRow label="Receita Líquida" value={totals?.receita_liquida} />
             <SummaryRow label="Custo" value={totals?.custo} />
@@ -147,9 +149,9 @@ export function DashboardPage({
         </div>
       </div>
 
-      <div className="mt-6 rounded-lg p-5 hud-panel enter">
-        <div className="mb-3 text-lg font-semibold hud-divider">Tabela Mensal</div>
-        <div className="overflow-x-auto text-sm">
+      <div className="mt-6 rounded-lg p-4 md:p-5 hud-panel enter">
+        <div className="mb-3 text-base md:text-lg font-semibold hud-divider">Tabela Mensal</div>
+        <div className="hidden md:block overflow-x-auto text-xs md:text-sm">
           <table className="w-full">
             <thead className="text-left text-xs text-hangar-muted">
               <tr>
@@ -174,6 +176,21 @@ export function DashboardPage({
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="md:hidden space-y-3 text-xs">
+          {series.map((s) => (
+            <details key={s.mes} className="rounded-md border border-hangar-slate/30 bg-hangar-surface/40 p-3">
+              <summary className="cursor-pointer list-none text-hangar-muted">{s.mes}</summary>
+              <div className="mt-2 space-y-1">
+                <Row label="Receita Bruta" value={currency(s.receita_bruta)} />
+                <Row label="Receita Líquida" value={currency(s.receita_liquida)} />
+                <Row label="Custo" value={currency(s.custo)} />
+                <Row label="Margem Bruta" value={`${currency(s.margem_bruta)} (${percent(s.margem_bruta_pct)})`} />
+                <Row label="Margem Líquida" value={`${currency(s.margem_liquida)} (${percent(s.margem_liquida_pct)})`} />
+              </div>
+            </details>
+          ))}
         </div>
       </div>
     </div>
@@ -261,6 +278,15 @@ function SummaryRow({ label, value, sub }: { label: string; value?: number; sub?
         <div>{currency(value)}</div>
         {sub && <div className="text-xs text-hangar-muted">{sub}</div>}
       </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="text-hangar-muted">{label}</div>
+      <div>{value}</div>
     </div>
   );
 }

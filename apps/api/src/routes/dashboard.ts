@@ -5,11 +5,12 @@ export async function dashboardRoutes(app: FastifyInstance) {
   const prisma = getPrisma();
 
   app.get('/dashboard', async (req) => {
-    const { tier_id, cliente_id, projeto_id, ano } = req.query as {
+    const { tier_id, cliente_id, projeto_id, ano, status } = req.query as {
       tier_id?: string;
       cliente_id?: string;
       projeto_id?: string;
       ano?: string;
+      status?: string;
     };
 
     const year = ano ? Number(ano) : new Date().getFullYear();
@@ -28,7 +29,12 @@ export async function dashboardRoutes(app: FastifyInstance) {
       }
     });
 
-    // Regra: se houver realizado, usa ele. Se houver múltiplos planejados, usa o mais recente.
+    if (status === 'planejado' || status === 'realizado') {
+      const filtered = registros.filter((r) => r.status === status);
+      return buildResponse(filtered, year);
+    }
+
+    // Pipeline (default): se houver realizado, usa ele. Se houver múltiplos planejados, usa o mais recente.
     const byKey = new Map<string, typeof registros[number]>();
     for (const r of registros) {
       const key = `${r.projetoId}-${r.mesRef.toISOString().slice(0, 10)}`;
@@ -52,16 +58,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
       if (r.updatedAt > current.updatedAt) byKey.set(key, r);
     }
 
-    const byMonth = new Map<number, { receita_bruta: number; receita_liquida: number; custo: number }>();
-    for (const r of byKey.values()) {
-      const m = r.mesRef.getUTCMonth() + 1;
-      const prev = byMonth.get(m) ?? { receita_bruta: 0, receita_liquida: 0, custo: 0 };
-      byMonth.set(m, {
-        receita_bruta: prev.receita_bruta + Number(r.receitaBruta),
-        receita_liquida: prev.receita_liquida + Number(r.receitaLiquida),
-        custo: prev.custo + Number(r.custoProjetado)
-      });
-    }
+    return buildResponse(Array.from(byKey.values()), year);
 
     const series_mensal = Array.from({ length: 12 }).map((_, idx) => {
       const month = idx + 1;
@@ -104,4 +101,58 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
     return { series_mensal, totais };
   });
+}
+
+function buildResponse(registros: Array<any>, year: number) {
+  const byMonth = new Map<number, { receita_bruta: number; receita_liquida: number; custo: number }>();
+  for (const r of registros) {
+    const m = r.mesRef.getUTCMonth() + 1;
+    const prev = byMonth.get(m) ?? { receita_bruta: 0, receita_liquida: 0, custo: 0 };
+    byMonth.set(m, {
+      receita_bruta: prev.receita_bruta + Number(r.receitaBruta),
+      receita_liquida: prev.receita_liquida + Number(r.receitaLiquida),
+      custo: prev.custo + Number(r.custoProjetado)
+    });
+  }
+
+  const series_mensal = Array.from({ length: 12 }).map((_, idx) => {
+    const month = idx + 1;
+    const r = byMonth.get(month);
+    const receita_bruta = r ? r.receita_bruta : 0;
+    const receita_liquida = r ? r.receita_liquida : 0;
+    const custo = r ? r.custo : 0;
+    const margem_bruta = receita_bruta - custo;
+    const margem_liquida = receita_liquida - custo;
+
+    return {
+      mes: `${year}-${String(month).padStart(2, '0')}`,
+      receita_bruta,
+      receita_liquida,
+      custo,
+      margem_bruta,
+      margem_liquida,
+      margem_bruta_pct: receita_bruta > 0 ? margem_bruta / receita_bruta : 0,
+      margem_liquida_pct: receita_liquida > 0 ? margem_liquida / receita_liquida : 0
+    };
+  });
+
+  const totals = series_mensal.reduce(
+    (acc, cur) => {
+      acc.receita_bruta += cur.receita_bruta;
+      acc.receita_liquida += cur.receita_liquida;
+      acc.custo += cur.custo;
+      acc.margem_bruta += cur.margem_bruta;
+      acc.margem_liquida += cur.margem_liquida;
+      return acc;
+    },
+    { receita_bruta: 0, receita_liquida: 0, custo: 0, margem_bruta: 0, margem_liquida: 0 }
+  );
+
+  const totais = {
+    ...totals,
+    margem_bruta_pct: totals.receita_bruta > 0 ? totals.margem_bruta / totals.receita_bruta : 0,
+    margem_liquida_pct: totals.receita_liquida > 0 ? totals.margem_liquida / totals.receita_liquida : 0
+  };
+
+  return { series_mensal, totais };
 }

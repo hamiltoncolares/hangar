@@ -31,7 +31,7 @@ export function ClientesPage() {
 
       <div className="grid gap-6 xl:grid-cols-3 enter">
         <Panel>
-          <h3 className="text-sm font-semibold">Novo Cliente</h3>
+          <h3 className="text-xs md:text-sm font-semibold">Novo Cliente</h3>
           <Select
             value={tierId}
             onChange={(e) => setTierId(e.target.value)}
@@ -78,8 +78,8 @@ export function ClientesPage() {
           </Button>
         </Panel>
         <Panel className="xl:col-span-2">
-          <h3 className="text-sm font-semibold">Lista</h3>
-          <ul className="mt-3 space-y-2 text-sm">
+          <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
+          <ul className="mt-3 space-y-2 text-xs md:text-sm">
             {items.map((c) => (
               <li key={c.id} className="flex items-center justify-between border-b border-hangar-slate/20 pb-2">
                 {editId === c.id ? (

@@ -26,13 +26,25 @@ export function RegistrosPage() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const { push } = useToast();
+  const [filterProjeto, setFilterProjeto] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'planejado' | 'realizado' | 'pipeline' | ''>('');
+  const [filterMes, setFilterMes] = useState('');
 
   const load = async () => {
-    const [p, i, r] = await Promise.all([apiClient.listProjetos(), apiClient.listImpostos(), apiClient.listRegistros({})]);
+    const [p, i, r] = await Promise.all([
+      apiClient.listProjetos(),
+      apiClient.listImpostos(),
+      apiClient.listRegistros({
+        projetoId: filterProjeto || undefined,
+        mesRef: filterMes || undefined,
+        status: filterStatus && filterStatus !== 'pipeline' ? filterStatus : undefined
+      })
+    ]);
     setProjetos(p);
     setImpostos(i);
     if (Array.isArray(r)) {
-      setItems(r as any[]);
+      const arr = r as any[];
+      setItems(filterStatus === 'pipeline' ? applyPipeline(arr) : arr);
     } else {
       setItems([]);
       push({ type: 'error', message: 'Resposta inválida para registros' });
@@ -41,7 +53,7 @@ export function RegistrosPage() {
 
   useEffect(() => {
     load().catch((e) => push({ type: 'error', message: e.message }));
-  }, []);
+  }, [filterProjeto, filterMes, filterStatus]);
 
   const impostosDoProjeto = impostos.filter((i) => i.projetoId === projetoId);
 
@@ -51,7 +63,7 @@ export function RegistrosPage() {
 
       <div className="grid gap-6 xl:grid-cols-3 enter">
         <Panel>
-          <h3 className="text-sm font-semibold">Novo Registro</h3>
+          <h3 className="text-xs md:text-sm font-semibold">Novo Registro</h3>
           <Select
             value={projetoId}
             onChange={(e) => {
@@ -149,8 +161,25 @@ export function RegistrosPage() {
           </Button>
         </Panel>
         <Panel className="xl:col-span-2">
-          <h3 className="text-sm font-semibold">Lista</h3>
-          <div className="mt-3 overflow-x-auto text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Select value={filterProjeto} onChange={(e) => setFilterProjeto(e.target.value)} className="w-40">
+                <option value="">Todos os Projetos</option>
+                {projetos.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </Select>
+              <Input value={filterMes} onChange={(e) => setFilterMes(e.target.value)} placeholder="YYYY-MM" className="w-28" />
+              <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="w-32">
+                <option value="">Status</option>
+                <option value="planejado">Planejado</option>
+                <option value="realizado">Realizado</option>
+                <option value="pipeline">Pipeline</option>
+              </Select>
+            </div>
+          </div>
+          <div className="mt-3 overflow-x-auto text-xs md:text-sm">
             <table className="w-full">
               <thead className="text-left text-xs text-hangar-muted">
                 <tr>
@@ -294,4 +323,28 @@ function formatCurrencyInput(value: string) {
 function parseCurrency(value: string) {
   const digits = value.replace(/\D/g, '');
   return Number(digits) / 100;
+}
+
+function applyPipeline(items: any[]) {
+  const byKey = new Map<string, any>();
+  for (const r of items) {
+    const key = `${r.projetoId}-${String(r.mesRef).slice(0, 10)}`;
+    const current = byKey.get(key);
+    if (!current) {
+      byKey.set(key, r);
+      continue;
+    }
+    if (current.status === 'realizado') {
+      if (r.status === 'realizado') {
+        if (new Date(r.updatedAt) > new Date(current.updatedAt)) byKey.set(key, r);
+      }
+      continue;
+    }
+    if (r.status === 'realizado') {
+      byKey.set(key, r);
+      continue;
+    }
+    if (new Date(r.updatedAt) > new Date(current.updatedAt)) byKey.set(key, r);
+  }
+  return Array.from(byKey.values());
 }
