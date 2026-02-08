@@ -76,47 +76,6 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
     const base = buildResponse(Array.from(byKey.values()), year);
     return { ...base, planned_vs_realizado };
-
-    const series_mensal = Array.from({ length: 12 }).map((_, idx) => {
-      const month = idx + 1;
-      const r = byMonth.get(month);
-      const receita_bruta = r ? r.receita_bruta : 0;
-      const receita_liquida = r ? r.receita_liquida : 0;
-      const custo = r ? r.custo : 0;
-      const margem_bruta = receita_bruta - custo;
-      const margem_liquida = receita_liquida - custo;
-
-      return {
-        mes: `${year}-${String(month).padStart(2, '0')}`,
-        receita_bruta,
-        receita_liquida,
-        custo,
-        margem_bruta,
-        margem_liquida,
-        margem_bruta_pct: receita_bruta > 0 ? margem_bruta / receita_bruta : 0,
-        margem_liquida_pct: receita_liquida > 0 ? margem_liquida / receita_liquida : 0
-      };
-    });
-
-    const totals = series_mensal.reduce(
-      (acc, cur) => {
-        acc.receita_bruta += cur.receita_bruta;
-        acc.receita_liquida += cur.receita_liquida;
-        acc.custo += cur.custo;
-        acc.margem_bruta += cur.margem_bruta;
-        acc.margem_liquida += cur.margem_liquida;
-        return acc;
-      },
-      { receita_bruta: 0, receita_liquida: 0, custo: 0, margem_bruta: 0, margem_liquida: 0 }
-    );
-
-    const totais = {
-      ...totals,
-      margem_bruta_pct: totals.receita_bruta > 0 ? totals.margem_bruta / totals.receita_bruta : 0,
-      margem_liquida_pct: totals.receita_liquida > 0 ? totals.margem_liquida / totals.receita_liquida : 0
-    };
-
-    return { series_mensal, totais };
   });
 }
 
