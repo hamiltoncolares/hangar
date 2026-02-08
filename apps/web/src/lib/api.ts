@@ -44,6 +44,11 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text();
     throw new Error(text || 'Request failed');
   }
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('text/csv')) {
+    const text = await res.text();
+    return text as unknown as T;
+  }
   return res.json() as Promise<T>;
 }
 
@@ -77,6 +82,7 @@ export const apiClient = {
   promoteUser: (id: string) => api(`/admin/users/${id}/promote`, { method: 'POST' }),
   setUserTiers: (id: string, tier_ids: string[]) =>
     api(`/admin/users/${id}/tiers`, { method: 'PUT', body: JSON.stringify({ tier_ids }) }),
+  exportAuditLogs: () => api(`/admin/audit/export`),
 
   getDashboard: (params: { tierId?: string; clienteId?: string; projetoId?: string; ano?: number; status?: string }) => {
     const q = new URLSearchParams();

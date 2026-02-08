@@ -62,6 +62,40 @@ export async function adminRoutes(app: FastifyInstance) {
     return { ok: true, user: { id: updated.id, role: updated.role } };
   });
 
+  app.get('/admin/audit/export', async (req, reply) => {
+    const { from, to } = req.query as { from?: string; to?: string };
+    const where: any = {};
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) where.createdAt.lte = new Date(to);
+    }
+
+    const logs = await prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        actor: true
+      }
+    });
+
+    const header = ['timestamp', 'actor_email', 'action', 'target_user_id', 'metadata'];
+    const rows = logs.map((l) => [
+      l.createdAt.toISOString(),
+      l.actor.email,
+      l.action,
+      l.targetUserId ?? '',
+      l.metadata ? JSON.stringify(l.metadata) : ''
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    reply.header('Content-Type', 'text/csv');
+    reply.header('Content-Disposition', 'attachment; filename=\"audit-logs.csv\"');
+    return reply.send(csv);
+  });
+
   app.put('/admin/users/:id/tiers', async (req) => {
     const { id } = req.params as { id: string };
     const body = req.body as { tier_ids?: string[] };

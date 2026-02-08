@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { tiersRoutes } from './routes/tiers.js';
 import { clientesRoutes } from './routes/clientes.js';
 import { projetosRoutes } from './routes/projetos.js';
@@ -24,6 +26,15 @@ await app.register(cors, {
     if (allowed.includes(origin)) return cb(null, true);
     return cb(new Error('Not allowed'), false);
   }
+});
+
+await app.register(helmet, {
+  contentSecurityPolicy: false
+});
+
+await app.register(rateLimit, {
+  max: 300,
+  timeWindow: '1 minute'
 });
 
 await app.register(jwt, {

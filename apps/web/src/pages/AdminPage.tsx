@@ -35,6 +35,23 @@ export function AdminPage() {
     <div className="px-6 py-6">
       <Header title="Admin" description="Aprovar usuários e gerenciar acessos" />
       <Panel>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-xs text-hangar-muted">Logs de auditoria</div>
+          <Button
+            onClick={async () => {
+              const csv = await apiClient.exportAuditLogs();
+              const blob = new Blob([csv as unknown as string], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'audit-logs.csv';
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Exportar logs
+          </Button>
+        </div>
         <div className="overflow-x-auto text-xs md:text-sm">
           <table className="w-full">
             <thead className="text-left text-xs text-hangar-muted">

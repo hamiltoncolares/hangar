@@ -92,6 +92,8 @@ model User {
   passwordHash String     @map("password_hash")
   role         String     @default("user")
   status       String     @default("pending")
+  failedLoginAttempts Int @default(0) @map("failed_login_attempts")
+  lockedUntil  DateTime?  @map("locked_until")
   tiers        UserTier[]
   auditLogs    AuditLog[] @relation("AuditActor")
   createdAt    DateTime   @default(now()) @map("created_at")
