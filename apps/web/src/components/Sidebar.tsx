@@ -19,6 +19,7 @@ export function Sidebar({
 }) {
   const items: NavItem[] = [
     { key: 'dashboard', label: 'Dashboard' },
+    { key: 'metas', label: 'Metas' },
     { key: 'tiers', label: 'Tiers' },
     { key: 'clientes', label: 'Clientes' },
     { key: 'projetos', label: 'Projetos' },

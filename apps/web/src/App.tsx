@@ -10,6 +10,7 @@ import { ImpostosPage } from './pages/ImpostosPage';
 import { RegistrosPage } from './pages/RegistrosPage';
 import { AdminPage } from './pages/AdminPage';
 import { AuthPage } from './pages/AuthPage';
+import { MetasPage } from './pages/MetasPage';
 import { apiClient, getAuthToken, setAuthToken } from './lib/api';
 
 export default function App() {
@@ -114,7 +115,7 @@ export default function App() {
           >
             Sair
           </button>
-          {active === 'dashboard' && (
+          {(active === 'dashboard' || active === 'metas') && (
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <select
                 value={String(year)}
@@ -199,6 +200,9 @@ export default function App() {
           {active === 'dashboard' && (
             <DashboardPage tierId={tierId} clienteId={clienteId} projetoId={projetoId} ano={year} status={dashboardStatus} view={dashboardView} />
           )}
+          {active === 'metas' && (
+            <MetasPage tierId={tierId} clienteId={clienteId} projetoId={projetoId} ano={year} status={dashboardStatus} />
+          )}
           {active === 'tiers' && <TiersPage />}
           {active === 'clientes' && <ClientesPage />}
           {active === 'projetos' && <ProjetosPage />}
@@ -213,6 +217,8 @@ export default function App() {
 
 function activeTitle(active: string) {
   switch (active) {
+    case 'metas':
+      return 'Metas';
     case 'admin':
       return 'Admin';
     case 'tiers':
@@ -232,6 +238,8 @@ function activeTitle(active: string) {
 
 function activeSubtitle(active: string) {
   switch (active) {
+    case 'metas':
+      return 'Acompanhamento de metas';
     case 'admin':
       return 'Gestão de usuários e acessos';
     case 'tiers':

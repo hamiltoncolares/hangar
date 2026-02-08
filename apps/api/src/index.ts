@@ -12,6 +12,7 @@ import { dashboardRoutes } from './routes/dashboard.js';
 import { exportRoutes } from './routes/export.js';
 import { authRoutes } from './routes/auth.js';
 import { adminRoutes } from './routes/admin.js';
+import { goalsRoutes } from './routes/goals.js';
 import { getPrisma } from './db.js';
 
 const app = Fastify({ logger: true });
@@ -102,6 +103,7 @@ app.register(impostosRoutes);
 app.register(registrosRoutes);
 app.register(dashboardRoutes);
 app.register(exportRoutes);
+app.register(goalsRoutes);
 
 const port = Number(process.env.PORT || 3001);
 const host = process.env.HOST || '0.0.0.0';

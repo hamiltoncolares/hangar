@@ -17,6 +17,14 @@ export type DashboardResponse = {
   cliente_share: Array<{ id: string; nome: string; receita_bruta: number; pct: number }>;
 };
 
+export type GoalsResponse = {
+  tiers: Array<{ id: string; nome: string; meta_pct: number; atual_pct: number }>;
+  clientes: Array<{ id: string; nome: string; meta_pct: number; atual_pct: number }>;
+  projetos: Array<{ id: string; nome: string; meta_pct: number; atual_pct: number }>;
+  series_mensal: Array<{ mes: string; meta_pct: number; atual_pct: number }>;
+  series_trimestral: Array<{ mes: string; meta_pct: number; atual_pct: number }>;
+};
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const AUTH_KEY = 'hangar_token';
 let authToken = typeof window !== 'undefined' ? localStorage.getItem(AUTH_KEY) || '' : '';
@@ -107,6 +115,31 @@ export const apiClient = {
     if (params.ano) q.set('ano', String(params.ano));
     if (params.status) q.set('status', params.status);
     return api<DashboardResponse>(`/dashboard?${q.toString()}`);
+  },
+
+  getGoals: (params: {
+    tierId?: string | string[];
+    clienteId?: string | string[];
+    projetoId?: string | string[];
+    ano?: number;
+    status?: string;
+  }) => {
+    const q = new URLSearchParams();
+    if (params.tierId) {
+      const ids = Array.isArray(params.tierId) ? params.tierId : [params.tierId];
+      ids.filter(Boolean).forEach((id) => q.append('tier_id', id));
+    }
+    if (params.clienteId) {
+      const ids = Array.isArray(params.clienteId) ? params.clienteId : [params.clienteId];
+      ids.filter(Boolean).forEach((id) => q.append('cliente_id', id));
+    }
+    if (params.projetoId) {
+      const ids = Array.isArray(params.projetoId) ? params.projetoId : [params.projetoId];
+      ids.filter(Boolean).forEach((id) => q.append('projeto_id', id));
+    }
+    if (params.ano) q.set('ano', String(params.ano));
+    if (params.status) q.set('status', params.status);
+    return api<GoalsResponse>(`/goals?${q.toString()}`);
   },
 
   listTiers: () => api<Array<{ id: string; nome: string; marginMeta?: number }>>('/tiers'),
