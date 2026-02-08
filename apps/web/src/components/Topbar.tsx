@@ -17,7 +17,7 @@ export function Topbar({
   onMenu?: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hangar-slate/30 bg-hangar-panel px-4 md:px-6 py-3 md:py-4 hud-panel">
+    <div className="relative z-[1000] isolate flex flex-wrap items-center justify-between gap-3 border-b border-hangar-slate/30 bg-hangar-panel px-4 md:px-6 py-3 md:py-4 hud-panel">
       <div className="flex items-center gap-2">
         {onMenu && (
           <button

@@ -82,29 +82,17 @@ export function DashboardPage({
         />
       </div>
 
-      <div className="mt-6 grid gap-6 grid-cols-1 xl:grid-cols-3 enter-delay">
-        <div className="xl:col-span-2 rounded-lg p-4 md:p-5 hud-panel relative overflow-hidden">
+      <div className="mt-6 grid gap-6 grid-cols-1 xl:grid-cols-2 enter-delay">
+        <div className="rounded-lg p-4 md:p-5 hud-panel relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 opacity-60">
             <div className="absolute inset-0 hud-grid" />
             <div className="absolute inset-0 bg-gradient-to-b from-hangar-accent/20 via-transparent to-transparent" />
           </div>
           <div className="mb-4 flex items-center justify-between hud-divider">
             <div>
-              <div className="text-base md:text-lg font-semibold">
-                {chartMode === 'planreal'
-                  ? isQuarterly
-                    ? 'Planejado vs Realizado (Trimestral)'
-                    : 'Planejado vs Realizado (Mensal)'
-                  : isQuarterly
-                  ? 'Evolução Trimestral'
-                  : 'Evolução Mensal'}
-              </div>
+              <div className="text-base md:text-lg font-semibold">{isQuarterly ? 'Evolução Trimestral' : 'Evolução Mensal'}</div>
               <div className="text-[10px] md:text-xs text-hangar-muted">
-                {chartMode === 'planreal'
-                  ? 'Comparativo de receita líquida'
-                  : isQuarterly
-                  ? 'Receita e custo por trimestre'
-                  : 'Receita e custo por mês'}
+                {isQuarterly ? 'Receita e custo por trimestre' : 'Receita e custo por mês'}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -119,43 +107,19 @@ export function DashboardPage({
               >
                 {chartAccum ? 'Mensal' : 'Acumulado'}
               </button>
-              <button
-                onClick={() => setChartMode((v) => (v === 'evolucao' ? 'planreal' : 'evolucao'))}
-                className={`rounded-md border px-2 py-1 text-[10px] md:text-xs transition ${
-                  chartMode === 'planreal'
-                    ? 'border-hangar-cyan/60 text-hangar-cyan bg-hangar-cyan/10'
-                    : 'border-hangar-slate/40 text-hangar-muted hover:bg-hangar-surface'
-                }`}
-              >
-                {chartMode === 'planreal' ? 'Evolução' : 'Planejado vs Realizado'}
-              </button>
             </div>
           </div>
-          {chartMode === 'evolucao' ? (
-            <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] md:text-xs text-hangar-muted">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-6 rounded-full bg-hangar-purple"></span> Receita Líquida
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-6 rounded-full bg-hangar-orange"></span> Custo
-              </span>
-            </div>
-          ) : (
-            <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] md:text-xs text-hangar-muted">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-6 rounded-full bg-hangar-cyan"></span> Planejado
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <span className="h-2 w-6 rounded-full bg-hangar-green"></span> Realizado
-              </span>
-            </div>
-          )}
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] md:text-xs text-hangar-muted">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-6 rounded-full bg-hangar-purple"></span> Receita Líquida
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-6 rounded-full bg-hangar-orange"></span> Custo
+            </span>
+          </div>
           <div className="relative h-60 md:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={chartMode === 'evolucao' ? chartSeries : chartPlanReal}
-                margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-              >
+              <ComposedChart data={chartSeries} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="liquida" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#7C4DFF" stopOpacity={0.3} />
@@ -164,14 +128,6 @@ export function DashboardPage({
                   <linearGradient id="custo" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#FF9100" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#FF9100" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="plan" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00E5FF" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="real" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00E676" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00E676" stopOpacity={0} />
                   </linearGradient>
                   <filter id="glowOrange" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -187,6 +143,77 @@ export function DashboardPage({
                       <feMergeNode in="SourceGraphic" />
                     </feMerge>
                   </filter>
+                </defs>
+                <XAxis dataKey="mes" tick={{ fill: 'var(--hangar-muted)', fontSize: 10 }} />
+                <YAxis tick={{ fill: 'var(--hangar-muted)', fontSize: 10 }} />
+                <Tooltip content={<HudTooltip labelTitle={isQuarterly ? 'Trimestre' : 'Mês'} />} />
+                <Area
+                  type="monotone"
+                  dataKey="receita_liquida"
+                  stroke="#7C4DFF"
+                  fill="url(#liquida)"
+                  strokeWidth={2.5}
+                  filter="url(#glowPurple)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="custo"
+                  stroke="#FF9100"
+                  fill="url(#custo)"
+                  strokeWidth={2.5}
+                  filter="url(#glowOrange)"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="rounded-lg p-4 md:p-5 hud-panel relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 opacity-60">
+            <div className="absolute inset-0 hud-grid" />
+            <div className="absolute inset-0 bg-gradient-to-b from-hangar-accent/20 via-transparent to-transparent" />
+          </div>
+          <div className="mb-4 flex items-center justify-between hud-divider">
+            <div>
+              <div className="text-base md:text-lg font-semibold">
+                {isQuarterly ? 'Planejado vs Realizado (Trimestral)' : 'Planejado vs Realizado (Mensal)'}
+              </div>
+              <div className="text-[10px] md:text-xs text-hangar-muted">Comparativo de receita líquida</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] md:text-xs text-hangar-muted">Ano {ano}</div>
+              <button
+                onClick={() => setChartAccum((v) => !v)}
+                className={`rounded-md border px-2 py-1 text-[10px] md:text-xs transition ${
+                  chartAccum
+                    ? 'border-hangar-orange/60 text-hangar-orange bg-hangar-orange/10'
+                    : 'border-hangar-slate/40 text-hangar-muted hover:bg-hangar-surface'
+                }`}
+              >
+                {chartAccum ? 'Mensal' : 'Acumulado'}
+              </button>
+            </div>
+          </div>
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] md:text-xs text-hangar-muted">
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-6 rounded-full bg-hangar-purple"></span> Planejado
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2 w-6 rounded-full bg-hangar-green"></span> Realizado
+            </span>
+          </div>
+          <div className="relative h-60 md:h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartPlanReal} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="plan" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#7C4DFF" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#7C4DFF" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="real" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00E676" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#00E676" stopOpacity={0} />
+                  </linearGradient>
                   <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
                     <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
                     <feMerge>
@@ -204,118 +231,88 @@ export function DashboardPage({
                 </defs>
                 <XAxis dataKey="mes" tick={{ fill: 'var(--hangar-muted)', fontSize: 10 }} />
                 <YAxis tick={{ fill: 'var(--hangar-muted)', fontSize: 10 }} />
-                <Tooltip
-                  content={
-                    chartMode === 'evolucao'
-                      ? <HudTooltip labelTitle={isQuarterly ? 'Trimestre' : 'Mês'} />
-                      : <PlanRealTooltip labelTitle={isQuarterly ? 'Trimestre' : 'Mês'} />
-                  }
+                <Tooltip content={<PlanRealTooltip labelTitle={isQuarterly ? 'Trimestre' : 'Mês'} />} />
+                <Bar
+                  dataKey="margem_planejada"
+                  fill="rgba(124,77,255,0.35)"
+                  stroke="#7C4DFF"
+                  strokeWidth={1.2}
+                  radius={[6, 6, 0, 0]}
+                  barSize={10}
+                  filter="url(#glowPurple)"
                 />
-                {chartMode === 'evolucao' ? (
-                  <>
-                    <Area
-                      type="monotone"
-                      dataKey="receita_liquida"
-                      stroke="#7C4DFF"
-                      fill="url(#liquida)"
-                      strokeWidth={2.5}
-                      filter="url(#glowPurple)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="custo"
-                      stroke="#FF9100"
-                      fill="url(#custo)"
-                      strokeWidth={2.5}
-                      filter="url(#glowOrange)"
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Bar
-                      dataKey="margem_planejada"
-                      fill="rgba(0,229,255,0.35)"
-                      stroke="#00E5FF"
-                      strokeWidth={1.2}
-                      radius={[6, 6, 0, 0]}
-                      barSize={10}
-                      filter="url(#glowCyan)"
-                    />
-                    <Bar
-                      dataKey="margem_realizada"
-                      fill="rgba(0,230,118,0.35)"
-                      stroke="#00E676"
-                      strokeWidth={1.2}
-                      radius={[6, 6, 0, 0]}
-                      barSize={10}
-                      filter="url(#glowGreen)"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="planejado"
-                      stroke="#00E5FF"
-                      fill="url(#plan)"
-                      strokeWidth={2.5}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="realizado"
-                      stroke="#00E676"
-                      fill="url(#real)"
-                      strokeWidth={2.5}
-                    />
-                  </>
-                )}
+                <Bar
+                  dataKey="margem_realizada"
+                  fill="rgba(0,230,118,0.35)"
+                  stroke="#00E676"
+                  strokeWidth={1.2}
+                  radius={[6, 6, 0, 0]}
+                  barSize={10}
+                  filter="url(#glowGreen)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="planejado"
+                  stroke="#7C4DFF"
+                  fill="url(#plan)"
+                  strokeWidth={2.5}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="realizado"
+                  stroke="#00E676"
+                  fill="url(#real)"
+                  strokeWidth={2.5}
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-6">
-          <div className="rounded-lg p-4 md:p-5 hud-panel">
-            <div className="text-base md:text-lg font-semibold hud-divider">Resumo do Ano</div>
-            <div className="mt-4 space-y-3 text-xs md:text-sm">
-              <SummaryRow label="Receita Bruta" value={totals?.receita_bruta} />
-              <SummaryRow label="Receita Líquida" value={totals?.receita_liquida} />
-              <SummaryRow label="Custo" value={totals?.custo} />
-              <SummaryRow label="Margem Bruta" value={totals?.margem_bruta} sub={percent(totals?.margem_bruta_pct)} />
-              <SummaryRow label="Margem Líquida" value={totals?.margem_liquida} sub={percent(totals?.margem_liquida_pct)} />
-            </div>
+      <div className="mt-6 grid gap-6 grid-cols-1 xl:grid-cols-2 enter-delay">
+        <div className="rounded-lg p-4 md:p-5 hud-panel">
+          <div className="text-base md:text-lg font-semibold hud-divider">Resumo do Ano</div>
+          <div className="mt-4 space-y-3 text-xs md:text-sm">
+            <SummaryRow label="Receita Bruta" value={totals?.receita_bruta} />
+            <SummaryRow label="Receita Líquida" value={totals?.receita_liquida} />
+            <SummaryRow label="Custo" value={totals?.custo} />
+            <SummaryRow label="Margem Bruta" value={totals?.margem_bruta} sub={percent(totals?.margem_bruta_pct)} />
+            <SummaryRow label="Margem Líquida" value={totals?.margem_liquida} sub={percent(totals?.margem_liquida_pct)} />
           </div>
+        </div>
 
-          <div className="rounded-lg p-4 md:p-5 hud-panel">
-            <div className="text-base md:text-lg font-semibold hud-divider">Participação por Cliente</div>
-            <div className="mt-3 text-[10px] md:text-xs text-hangar-muted">
-              {tierId ? 'Dentro do Tier selecionado' : 'Todos os Tiers'}
-            </div>
-            <div className="mt-3 h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={clienteShareColored}
-                    dataKey="receita_bruta"
-                    nameKey="nome"
-                    innerRadius={50}
-                    outerRadius={78}
-                    paddingAngle={2}
-                    stroke="none"
-                  >
-                  </Pie>
-                  <Tooltip content={<ClienteShareTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-2 space-y-1 text-[10px] md:text-xs">
-              {clienteShare.slice(0, 5).map((c, idx) => (
-                <div key={c.id} className="flex items-center justify-between text-hangar-muted">
-                  <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full" style={{ background: shareColors[idx % shareColors.length] }} />
-                    {c.nome}
-                  </span>
-                  <span>{currency(c.receita_bruta)} · {percent(c.pct)}</span>
-                </div>
-              ))}
-            </div>
+        <div className="rounded-lg p-4 md:p-5 hud-panel">
+          <div className="text-base md:text-lg font-semibold hud-divider">Participação por Cliente</div>
+          <div className="mt-3 text-[10px] md:text-xs text-hangar-muted">
+            {tierId ? 'Dentro do Tier selecionado' : 'Todos os Tiers'}
+          </div>
+          <div className="mt-3 h-52">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={clienteShareColored}
+                  dataKey="receita_bruta"
+                  nameKey="nome"
+                  innerRadius={50}
+                  outerRadius={78}
+                  paddingAngle={2}
+                  stroke="none"
+                />
+                <Tooltip content={<ClienteShareTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-2 space-y-1 text-[10px] md:text-xs">
+            {clienteShare.slice(0, 5).map((c, idx) => (
+              <div key={c.id} className="flex items-center justify-between text-hangar-muted">
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ background: shareColors[idx % shareColors.length] }} />
+                  {c.nome}
+                </span>
+                <span>{currency(c.receita_bruta)} · {percent(c.pct)}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

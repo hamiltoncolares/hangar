@@ -8,30 +8,33 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
   app.get('/dashboard', async (req) => {
     const { tier_id, cliente_id, projeto_id, ano, status } = req.query as {
-      tier_id?: string;
-      cliente_id?: string;
-      projeto_id?: string;
+      tier_id?: string | string[];
+      cliente_id?: string | string[];
+      projeto_id?: string | string[];
       ano?: string;
       status?: string;
     };
+    const tierIds = (Array.isArray(tier_id) ? tier_id : tier_id ? [tier_id] : []).filter(Boolean);
+    const clienteIds = (Array.isArray(cliente_id) ? cliente_id : cliente_id ? [cliente_id] : []).filter(Boolean);
+    const projetoIds = (Array.isArray(projeto_id) ? projeto_id : projeto_id ? [projeto_id] : []).filter(Boolean);
 
     const year = ano ? Number(ano) : new Date().getFullYear();
     const start = new Date(Date.UTC(year, 0, 1));
     const end = new Date(Date.UTC(year + 1, 0, 1));
 
     const projetoWhere: any = {};
-    if (projeto_id) projetoWhere.id = projeto_id;
-    if (cliente_id) projetoWhere.clienteId = cliente_id;
-    if (tier_id) projetoWhere.cliente = { ...(projetoWhere.cliente ?? {}), tierId: tier_id };
+    if (projetoIds.length) projetoWhere.id = { in: projetoIds };
+    if (clienteIds.length) projetoWhere.clienteId = { in: clienteIds };
+    if (tierIds.length) projetoWhere.cliente = { ...(projetoWhere.cliente ?? {}), tierId: { in: tierIds } };
 
     if (req.user?.role !== 'admin') {
       const allowed = req.userTierIds ?? [];
-      if (tier_id && !allowed.includes(tier_id)) {
+      if (tierIds.length && tierIds.some((id) => !allowed.includes(id))) {
         return { series_mensal: [], totais: { receita_bruta: 0, receita_liquida: 0, custo: 0, margem_bruta: 0, margem_liquida: 0, margem_bruta_pct: 0, margem_liquida_pct: 0 }, planned_vs_realizado: [], cliente_share: [] };
       }
       projetoWhere.cliente = {
         ...(projetoWhere.cliente ?? {}),
-        tierId: { in: tier_id ? [tier_id] : allowed }
+        tierId: { in: tierIds.length ? tierIds : allowed }
       };
     }
 
@@ -59,12 +62,12 @@ export async function dashboardRoutes(app: FastifyInstance) {
     });
 
     const shareProjetoWhere: any = {};
-    if (tier_id) shareProjetoWhere.cliente = { ...(shareProjetoWhere.cliente ?? {}), tierId: tier_id };
+    if (tierIds.length) shareProjetoWhere.cliente = { ...(shareProjetoWhere.cliente ?? {}), tierId: { in: tierIds } };
     if (req.user?.role !== 'admin') {
       const allowed = req.userTierIds ?? [];
       shareProjetoWhere.cliente = {
         ...(shareProjetoWhere.cliente ?? {}),
-        tierId: { in: tier_id ? [tier_id] : allowed }
+        tierId: { in: tierIds.length ? tierIds : allowed }
       };
     }
 

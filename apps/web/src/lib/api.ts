@@ -84,11 +84,26 @@ export const apiClient = {
     api(`/admin/users/${id}/tiers`, { method: 'PUT', body: JSON.stringify({ tier_ids }) }),
   exportAuditLogs: () => api(`/admin/audit/export`),
 
-  getDashboard: (params: { tierId?: string; clienteId?: string; projetoId?: string; ano?: number; status?: string }) => {
+  getDashboard: (params: {
+    tierId?: string | string[];
+    clienteId?: string | string[];
+    projetoId?: string | string[];
+    ano?: number;
+    status?: string;
+  }) => {
     const q = new URLSearchParams();
-    if (params.tierId) q.set('tier_id', params.tierId);
-    if (params.clienteId) q.set('cliente_id', params.clienteId);
-    if (params.projetoId) q.set('projeto_id', params.projetoId);
+    if (params.tierId) {
+      const ids = Array.isArray(params.tierId) ? params.tierId : [params.tierId];
+      ids.filter(Boolean).forEach((id) => q.append('tier_id', id));
+    }
+    if (params.clienteId) {
+      const ids = Array.isArray(params.clienteId) ? params.clienteId : [params.clienteId];
+      ids.filter(Boolean).forEach((id) => q.append('cliente_id', id));
+    }
+    if (params.projetoId) {
+      const ids = Array.isArray(params.projetoId) ? params.projetoId : [params.projetoId];
+      ids.filter(Boolean).forEach((id) => q.append('projeto_id', id));
+    }
     if (params.ano) q.set('ano', String(params.ano));
     if (params.status) q.set('status', params.status);
     return api<DashboardResponse>(`/dashboard?${q.toString()}`);
