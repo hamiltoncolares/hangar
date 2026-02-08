@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Area, Bar, ComposedChart, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, Bar, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import { apiClient, GoalsResponse } from '../lib/api';
 
 export function MetasPage({
@@ -120,12 +121,15 @@ function MetaChart({ title, data }: { title: string; data: Array<{ id: string; n
   );
 }
 
-function MetaTooltip({ active, payload, label }: any) {
+type MetaPoint = { meta_pct?: number; atual_pct?: number; nome?: string; mes?: string };
+
+function MetaTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
-  const data = payload[0]?.payload;
+  const data = payload[0]?.payload as MetaPoint | undefined;
+  if (!data) return null;
   return (
-    <div className="rounded-md border border-hangar-slate/40 bg-hangar-panel/90 px-3 py-2 text-xs text-hangar-text hud-glow">
-      <div className="mb-1 text-hangar-muted">{label}</div>
+    <div className="rounded-md border border-hangar-slate/60 bg-hangar-panel/95 px-3 py-2 text-xs text-hangar-text shadow-lg backdrop-blur">
+      <div className="mb-1 text-hangar-text/80">{label}</div>
       <div className="flex items-center justify-between gap-3">
         <span>Meta</span>
         <span>{percent(data.meta_pct)}</span>
@@ -201,12 +205,13 @@ function MetaProgressChart({ title, data }: { title: string; data: Array<{ mes: 
   );
 }
 
-function MetaProgressTooltip({ active, payload, label }: any) {
+function MetaProgressTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
-  const data = payload[0]?.payload;
+  const data = payload[0]?.payload as MetaPoint | undefined;
+  if (!data) return null;
   return (
-    <div className="rounded-md border border-hangar-slate/40 bg-hangar-panel/90 px-3 py-2 text-xs text-hangar-text hud-glow">
-      <div className="mb-1 text-hangar-muted">{label}</div>
+    <div className="rounded-md border border-hangar-slate/60 bg-hangar-panel/95 px-3 py-2 text-xs text-hangar-text shadow-lg backdrop-blur">
+      <div className="mb-1 text-hangar-text/80">{label}</div>
       <div className="flex items-center justify-between gap-3">
         <span>Meta</span>
         <span>{percent(data.meta_pct)}</span>

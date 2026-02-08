@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
-    "lint": "echo \"(todo) lint\"",
+    "lint": "eslint \"src/**/*.ts\"",
     "prisma": "prisma"
   },
   "dependencies": {

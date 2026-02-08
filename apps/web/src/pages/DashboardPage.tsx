@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Area, Bar, ComposedChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import { apiClient, DashboardResponse } from '../lib/api';
 
 export function DashboardPage({
@@ -20,7 +21,6 @@ export function DashboardPage({
   const [data, setData] = useState<DashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [highVis, setHighVis] = useState(false);
-  const [chartMode, setChartMode] = useState<'evolucao' | 'planreal'>('evolucao');
   const [chartAccum, setChartAccum] = useState(false);
 
   useEffect(() => {
@@ -399,13 +399,30 @@ function percent(value?: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function HudTooltip({ active, payload, label, labelTitle }: any) {
+type DashboardPoint = {
+  receita_liquida?: number;
+  custo?: number;
+  margem_liquida?: number;
+  margem_liquida_pct?: number;
+  planejado?: number;
+  realizado?: number;
+  margem_planejada_pct?: number;
+  margem_realizada_pct?: number;
+  pct?: number;
+  receita_bruta?: number;
+  nome?: string;
+};
+
+type HudTooltipProps = TooltipProps<number, string> & { labelTitle?: string };
+
+function HudTooltip({ active, payload, label, labelTitle }: HudTooltipProps) {
   if (!active || !payload?.length) return null;
-  const data = payload[0]?.payload;
+  const data = payload[0]?.payload as DashboardPoint | undefined;
+  if (!data) return null;
   return (
-    <div className="rounded-md border border-hangar-slate/40 bg-hangar-panel/90 px-3 py-2 text-xs text-hangar-text hud-glow">
+    <div className="rounded-md border border-hangar-slate/60 bg-hangar-panel/95 px-3 py-2 text-xs text-hangar-text shadow-lg backdrop-blur">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="text-hangar-muted">{labelTitle ?? 'Mês'}</div>
+        <div className="text-hangar-text/80">{labelTitle ?? 'Mês'}</div>
         <div>{label}</div>
       </div>
       <div className="flex items-center justify-between gap-3">
@@ -423,17 +440,18 @@ function HudTooltip({ active, payload, label, labelTitle }: any) {
   );
 }
 
-function PlanRealTooltip({ active, payload, label, labelTitle }: any) {
+function PlanRealTooltip({ active, payload, label, labelTitle }: HudTooltipProps) {
   if (!active || !payload?.length) return null;
-  const data = payload[0]?.payload;
+  const data = payload[0]?.payload as DashboardPoint | undefined;
+  if (!data) return null;
   return (
-    <div className="rounded-md border border-hangar-slate/40 bg-hangar-panel/90 px-3 py-2 text-xs text-hangar-text hud-glow">
+    <div className="rounded-md border border-hangar-slate/60 bg-hangar-panel/95 px-3 py-2 text-xs text-hangar-text shadow-lg backdrop-blur">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="text-hangar-muted">{labelTitle ?? 'Mês'}</div>
+        <div className="text-hangar-text/80">{labelTitle ?? 'Mês'}</div>
         <div>{label}</div>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <Badge color="cyan">Planejado</Badge>
+        <Badge color="purple">Planejado</Badge>
         <div>{currency(data.planejado)}</div>
       </div>
       <div className="mt-1 flex items-center justify-between gap-3">
@@ -441,7 +459,7 @@ function PlanRealTooltip({ active, payload, label, labelTitle }: any) {
         <div>{currency(data.realizado)}</div>
       </div>
       <div className="mt-2 flex items-center justify-between gap-3">
-        <Badge color="cyan">Margem P.</Badge>
+        <Badge color="purple">Margem P.</Badge>
         <div>{percent(data.margem_planejada_pct)}</div>
       </div>
       <div className="mt-1 flex items-center justify-between gap-3">
@@ -466,17 +484,25 @@ function Badge({ color, children }: { color: 'cyan' | 'purple' | 'orange' | 'gre
 
 const shareColors = ['#00E5FF', '#7C4DFF', '#00E676', '#FF9100', '#C0C0C0', '#546E7A', '#FF1744'];
 
-function ClienteShareTooltip({ active, payload }: any) {
+type ClienteSharePoint = { nome?: string; receita_bruta?: number; pct?: number };
+
+function ClienteShareTooltip({ active, payload }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
-  const data = payload[0]?.payload;
+  const data = payload[0]?.payload as ClienteSharePoint | undefined;
+  if (!data) return null;
+  const color = payload[0]?.color;
   return (
-    <div className="rounded-md border border-hangar-slate/40 bg-hangar-panel/90 px-3 py-2 text-xs text-hangar-text hud-glow">
-      <div className="mb-1 text-hangar-muted">{data?.nome}</div>
-      <div className="flex items-center justify-between gap-3">
-        <span>Receita Bruta</span>
-        <span>{currency(data?.receita_bruta)}</span>
+    <div className="rounded-lg border border-hangar-cyan/40 bg-hangar-panel/95 px-3 py-2 text-xs text-hangar-text shadow-xl backdrop-blur hud-glow">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="h-2 w-2 rounded-full" style={{ background: color || '#00E5FF' }} />
+        <span className="text-hangar-muted">{data?.nome}</span>
       </div>
-      <div className="mt-1 text-hangar-muted">{percent(data?.pct)}</div>
+      <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1">
+        <span className="text-hangar-muted">Receita Bruta</span>
+        <span className="font-semibold text-hangar-text">{currency(data?.receita_bruta)}</span>
+        <span className="text-hangar-muted">Participação</span>
+        <span className="font-semibold text-hangar-text">{percent(data?.pct)}</span>
+      </div>
     </div>
   );
 }

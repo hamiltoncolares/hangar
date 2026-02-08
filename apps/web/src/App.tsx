@@ -13,6 +13,9 @@ import { AuthPage } from './pages/AuthPage';
 import { MetasPage } from './pages/MetasPage';
 import { apiClient, getAuthToken, setAuthToken } from './lib/api';
 
+type DashboardStatus = 'planejado' | 'realizado' | 'pipeline' | '';
+type DashboardView = 'mensal' | 'trimestral';
+
 export default function App() {
   const [theme, setTheme] = useState<Theme>('light');
   const [active, setActive] = useState('dashboard');
@@ -23,8 +26,8 @@ export default function App() {
   const [tierId, setTierId] = useState<string[]>([]);
   const [clienteId, setClienteId] = useState<string[]>([]);
   const [projetoId, setProjetoId] = useState<string[]>([]);
-  const [dashboardStatus, setDashboardStatus] = useState<'planejado' | 'realizado' | 'pipeline' | ''>('pipeline');
-  const [dashboardView, setDashboardView] = useState<'mensal' | 'trimestral'>('mensal');
+  const [dashboardStatus, setDashboardStatus] = useState<DashboardStatus>('pipeline');
+  const [dashboardView, setDashboardView] = useState<DashboardView>('mensal');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<{ id: string; email: string; role: string; status: string; name?: string | null } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -94,27 +97,31 @@ export default function App() {
             setTheme(next);
             applyTheme(next);
           }}
+          rightActions={
+            <>
+              {user?.role === 'admin' && (
+                <button
+                  className="rounded-md border border-hangar-slate/40 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
+                  onClick={() => setActive('admin')}
+                >
+                  Admin
+                </button>
+              )}
+              <div className="text-[10px] md:text-xs text-hangar-muted">
+                {user.name || user.email}
+              </div>
+              <button
+                className="rounded-md border border-hangar-slate/40 px-3 py-2 text-[10px] md:text-xs text-hangar-muted transition hover:bg-hangar-surface"
+                onClick={() => {
+                  setAuthToken('');
+                  setUser(null);
+                }}
+              >
+                Sair
+              </button>
+            </>
+          }
         >
-          {user?.role === 'admin' && (
-            <button
-              className="rounded-md border border-hangar-slate/40 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
-              onClick={() => setActive('admin')}
-            >
-              Admin
-            </button>
-          )}
-          <div className="text-[10px] md:text-xs text-hangar-muted">
-            {user.name || user.email}
-          </div>
-          <button
-            className="rounded-md border border-hangar-slate/40 px-3 py-2 text-[10px] md:text-xs text-hangar-muted transition hover:bg-hangar-surface"
-            onClick={() => {
-              setAuthToken('');
-              setUser(null);
-            }}
-          >
-            Sair
-          </button>
           {(active === 'dashboard' || active === 'metas') && (
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <select
@@ -158,7 +165,7 @@ export default function App() {
               />
               <select
                 value={dashboardStatus}
-                onChange={(e) => setDashboardStatus(e.target.value as any)}
+                onChange={(e) => setDashboardStatus(e.target.value as DashboardStatus)}
                 className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
               >
                 <option value="pipeline">Pipeline</option>
@@ -167,7 +174,7 @@ export default function App() {
               </select>
               <select
                 value={dashboardView}
-                onChange={(e) => setDashboardView(e.target.value as any)}
+                onChange={(e) => setDashboardView(e.target.value as DashboardView)}
                 className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
               >
                 <option value="mensal">Mensal</option>
