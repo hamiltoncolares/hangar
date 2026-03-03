@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
-import { Button, Input, Panel } from '../components/ui';
+import { Input, Panel } from '../components/ui';
 import { useToast } from '../components/Toast';
 
 export function TiersPage() {
@@ -14,15 +14,18 @@ export function TiersPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const { push } = useToast();
 
-  const load = () =>
-    apiClient
-      .listTiers()
-      .then(setItems)
-      .catch((e) => push({ type: 'error', message: e.message }));
+  const load = useCallback(async () => {
+    try {
+      const tiers = await apiClient.listTiers();
+      setItems(tiers);
+    } catch (error: unknown) {
+      push({ type: 'error', message: getErrorMessage(error) });
+    }
+  }, [push]);
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   return (
     <div className="px-6 py-6">
@@ -44,7 +47,8 @@ export function TiersPage() {
             className="mt-3"
           />
           {fieldError && <p className="mt-1 text-xs text-hangar-red">{fieldError}</p>}
-          <Button
+          <button
+            className="action-btn action-btn-save mt-3 w-full"
             onClick={async () => {
               if (!nome.trim()) {
                 setFieldError('Nome é obrigatório');
@@ -58,14 +62,13 @@ export function TiersPage() {
                 setMarginMeta('');
                 push({ type: 'success', message: 'Tier criado' });
                 load();
-              } catch (e: any) {
-                push({ type: 'error', message: e.message });
+              } catch (error: unknown) {
+                push({ type: 'error', message: getErrorMessage(error) });
               }
             }}
-            className="mt-3 w-full"
           >
             Salvar
-          </Button>
+          </button>
         </Panel>
         <Panel className="xl:col-span-2">
           <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
@@ -91,7 +94,8 @@ export function TiersPage() {
                         </td>
                         <td className="py-2">
                           <div className="flex items-center gap-2">
-                            <Button
+                            <button
+                              className="action-btn action-btn-save"
                               onClick={async () => {
                                 if (!editNome.trim()) {
                                   setEditError('Nome é obrigatório');
@@ -106,9 +110,9 @@ export function TiersPage() {
                               }}
                             >
                               Salvar
-                            </Button>
+                            </button>
                             {editError && <span className="text-xs text-hangar-red">{editError}</span>}
-                            <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
+                            <button className="action-btn action-btn-cancel" onClick={() => setEditId(null)}>Cancelar</button>
                           </div>
                         </td>
                       </>
@@ -119,7 +123,7 @@ export function TiersPage() {
                         <td className="py-2">
                           <div className="flex items-center gap-2">
                             <button
-                              className="text-xs text-hangar-cyan"
+                              className="action-btn action-btn-edit"
                               onClick={() => {
                                 setEditId(t.id);
                                 setEditNome(t.nome);
@@ -129,7 +133,7 @@ export function TiersPage() {
                               Editar
                             </button>
                             <button
-                              className="text-xs text-hangar-red"
+                              className="action-btn action-btn-delete"
                               onClick={async () => {
                                 if (!window.confirm('Excluir este tier?')) return;
                                 await apiClient.deleteTier(t.id);
@@ -166,4 +170,8 @@ function Header({ title, description }: { title: string; description: string }) 
 function formatPercent(value?: number) {
   if (value === undefined || value === null) return '--';
   return `${Number(value).toFixed(1)}%`;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Erro inesperado';
 }

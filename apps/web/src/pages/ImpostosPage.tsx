@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
-import { Button, Input, Panel, Select } from '../components/ui';
+import { Input, Panel, Select } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { isDate } from '../lib/validators';
 
@@ -22,15 +22,19 @@ export function ImpostosPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const { push } = useToast();
 
-  const load = async () => {
-    const [p, i] = await Promise.all([apiClient.listProjetos(), apiClient.listImpostos()]);
-    setProjetos(p);
-    setItems(i);
-  };
+  const load = useCallback(async () => {
+    try {
+      const [p, i] = await Promise.all([apiClient.listProjetos(), apiClient.listImpostos()]);
+      setProjetos(p);
+      setItems(i);
+    } catch (error: unknown) {
+      push({ type: 'error', message: getErrorMessage(error) });
+    }
+  }, [push]);
 
   useEffect(() => {
-    load().catch((e) => push({ type: 'error', message: e.message }));
-  }, []);
+    void load();
+  }, [load]);
 
   return (
     <div className="px-6 py-6">
@@ -70,7 +74,8 @@ export function ImpostosPage() {
             className="mt-3"
           />
           {fieldError && <p className="mt-1 text-xs text-hangar-red">{fieldError}</p>}
-          <Button
+          <button
+            className="action-btn action-btn-save mt-3 w-full"
             onClick={async () => {
               if (!projetoId) {
                 setFieldError('Projeto é obrigatório');
@@ -106,14 +111,13 @@ export function ImpostosPage() {
                 setFim('');
                 push({ type: 'success', message: 'Imposto criado' });
                 load();
-              } catch (e: any) {
-                push({ type: 'error', message: e.message });
+              } catch (error: unknown) {
+                push({ type: 'error', message: getErrorMessage(error) });
               }
             }}
-            className="mt-3 w-full"
           >
             Salvar
-          </Button>
+          </button>
         </Panel>
         <Panel className="xl:col-span-2">
           <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
@@ -133,7 +137,8 @@ export function ImpostosPage() {
                     <Input value={editPercentual} onChange={(e) => setEditPercentual(e.target.value)} />
                     <Input value={editInicio} onChange={(e) => setEditInicio(e.target.value)} />
                     <Input value={editFim} onChange={(e) => setEditFim(e.target.value)} />
-                    <Button
+                    <button
+                      className="action-btn action-btn-save"
                       onClick={async () => {
                         if (!editProjeto) return setEditError('Projeto é obrigatório');
                         if (!editPercentual) return setEditError('Percentual é obrigatório');
@@ -152,9 +157,9 @@ export function ImpostosPage() {
                       }}
                     >
                       Salvar
-                    </Button>
+                    </button>
                     {editError && <span className="text-xs text-hangar-red">{editError}</span>}
-                    <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
+                    <button className="action-btn action-btn-cancel" onClick={() => setEditId(null)}>Cancelar</button>
                   </div>
                 ) : (
                   <>
@@ -162,7 +167,7 @@ export function ImpostosPage() {
                     <span className="text-xs text-hangar-muted">{i.percentual}%</span>
                     <div className="flex items-center gap-2">
                       <button
-                        className="text-xs text-hangar-cyan"
+                        className="action-btn action-btn-edit"
                         onClick={() => {
                           setEditId(i.id);
                           setEditProjeto(i.projetoId);
@@ -174,7 +179,7 @@ export function ImpostosPage() {
                         Editar
                       </button>
                       <button
-                        className="text-xs text-hangar-red"
+                        className="action-btn action-btn-delete"
                         onClick={async () => {
                           if (!window.confirm('Excluir este imposto?')) return;
                           await apiClient.deleteImposto(i.id);
@@ -209,4 +214,8 @@ function parsePtNumber(value: string) {
   const normalized = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
   const n = Number(normalized);
   return Number.isNaN(n) ? 0 : n;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Erro inesperado';
 }

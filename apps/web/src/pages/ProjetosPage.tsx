@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
-import { Button, Input, Panel, Select } from '../components/ui';
+import { Input, Panel, Select } from '../components/ui';
 import { useToast } from '../components/Toast';
 
 export function ProjetosPage() {
@@ -19,15 +19,19 @@ export function ProjetosPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const { push } = useToast();
 
-  const load = async () => {
-    const [c, p] = await Promise.all([apiClient.listClientes(), apiClient.listProjetos()]);
-    setClientes(c);
-    setItems(p);
-  };
+  const load = useCallback(async () => {
+    try {
+      const [c, p] = await Promise.all([apiClient.listClientes(), apiClient.listProjetos()]);
+      setClientes(c);
+      setItems(p);
+    } catch (error: unknown) {
+      push({ type: 'error', message: getErrorMessage(error) });
+    }
+  }, [push]);
 
   useEffect(() => {
-    load().catch((e) => push({ type: 'error', message: e.message }));
-  }, []);
+    void load();
+  }, [load]);
 
   return (
     <div className="px-6 py-6">
@@ -69,7 +73,8 @@ export function ProjetosPage() {
             <option value="ativo">Ativo</option>
             <option value="pausado">Pausado</option>
           </Select>
-          <Button
+          <button
+            className="action-btn action-btn-save mt-3 w-full"
             onClick={async () => {
               if (!clienteId) {
                 setFieldError('Cliente é obrigatório');
@@ -88,14 +93,13 @@ export function ProjetosPage() {
                 setMarginMeta('');
                 push({ type: 'success', message: 'Projeto criado' });
                 load();
-              } catch (e: any) {
-                push({ type: 'error', message: e.message });
+              } catch (error: unknown) {
+                push({ type: 'error', message: getErrorMessage(error) });
               }
             }}
-            className="mt-3 w-full"
           >
             Salvar
-          </Button>
+          </button>
         </Panel>
         <Panel className="xl:col-span-2">
           <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
@@ -139,7 +143,8 @@ export function ProjetosPage() {
                         </td>
                         <td className="py-2">
                           <div className="flex items-center gap-2">
-                            <Button
+                            <button
+                              className="action-btn action-btn-save"
                               onClick={async () => {
                                 if (!editCliente) {
                                   setEditError('Cliente é obrigatório');
@@ -158,9 +163,9 @@ export function ProjetosPage() {
                               }}
                             >
                               Salvar
-                            </Button>
+                            </button>
                             {editError && <span className="text-xs text-hangar-red">{editError}</span>}
-                            <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
+                            <button className="action-btn action-btn-cancel" onClick={() => setEditId(null)}>Cancelar</button>
                           </div>
                         </td>
                       </>
@@ -173,7 +178,7 @@ export function ProjetosPage() {
                         <td className="py-2">
                           <div className="flex items-center gap-2">
                             <button
-                              className="text-xs text-hangar-cyan"
+                              className="action-btn action-btn-edit"
                               onClick={() => {
                                 setEditId(p.id);
                                 setEditNome(p.nome);
@@ -185,7 +190,7 @@ export function ProjetosPage() {
                               Editar
                             </button>
                             <button
-                              className="text-xs text-hangar-red"
+                              className="action-btn action-btn-delete"
                               onClick={async () => {
                                 if (!window.confirm('Excluir este projeto?')) return;
                                 await apiClient.deleteProjeto(p.id);
@@ -222,4 +227,8 @@ function Header({ title, description }: { title: string; description: string }) 
 function formatPercent(value?: number) {
   if (value === undefined || value === null) return '--';
   return `${Number(value).toFixed(1)}%`;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Erro inesperado';
 }

@@ -1,13 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
-import { Button, Input, Panel, Select, TextArea } from '../components/ui';
+import { Input, Panel, Select, TextArea } from '../components/ui';
 import { useToast } from '../components/Toast';
 import { isMonth } from '../lib/validators';
 
 export function RegistrosPage() {
+  type RegistroItem = {
+    id: string;
+    projetoId: string;
+    impostoId: string;
+    mesRef: string;
+    receitaBruta: number;
+    custoProjetado: number;
+    marginMeta?: number | null;
+    status: 'planejado' | 'realizado';
+    observacoes?: string | null;
+    updatedAt?: string;
+  };
+
   const [projetos, setProjetos] = useState<Array<{ id: string; nome: string }>>([]);
   const [impostos, setImpostos] = useState<Array<{ id: string; projetoId: string; percentual: number }>>([]);
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<RegistroItem[]>([]);
   const [projetoId, setProjetoId] = useState('');
   const [impostoId, setImpostoId] = useState('');
   const [mesRef, setMesRef] = useState('');
@@ -32,30 +45,34 @@ export function RegistrosPage() {
   const [filterStatus, setFilterStatus] = useState<'planejado' | 'realizado' | 'pipeline' | ''>('');
   const [filterMes, setFilterMes] = useState('');
 
-  const load = async () => {
-    const [p, i, r] = await Promise.all([
-      apiClient.listProjetos(),
-      apiClient.listImpostos(),
-      apiClient.listRegistros({
-        projetoId: filterProjeto || undefined,
-        mesRef: filterMes || undefined,
-        status: filterStatus && filterStatus !== 'pipeline' ? filterStatus : undefined
-      })
-    ]);
-    setProjetos(p);
-    setImpostos(i);
-    if (Array.isArray(r)) {
-      const arr = r as any[];
-      setItems(filterStatus === 'pipeline' ? applyPipeline(arr) : arr);
-    } else {
-      setItems([]);
-      push({ type: 'error', message: 'Resposta inválida para registros' });
+  const load = useCallback(async () => {
+    try {
+      const [p, i, r] = await Promise.all([
+        apiClient.listProjetos(),
+        apiClient.listImpostos(),
+        apiClient.listRegistros({
+          projetoId: filterProjeto || undefined,
+          mesRef: filterMes || undefined,
+          status: filterStatus && filterStatus !== 'pipeline' ? filterStatus : undefined
+        })
+      ]);
+      setProjetos(p);
+      setImpostos(i);
+      if (Array.isArray(r)) {
+        const arr = r as RegistroItem[];
+        setItems(filterStatus === 'pipeline' ? applyPipeline(arr) : arr);
+      } else {
+        setItems([]);
+        push({ type: 'error', message: 'Resposta inválida para registros' });
+      }
+    } catch (error: unknown) {
+      push({ type: 'error', message: getErrorMessage(error) });
     }
-  };
+  }, [filterProjeto, filterMes, filterStatus, push]);
 
   useEffect(() => {
-    load().catch((e) => push({ type: 'error', message: e.message }));
-  }, [filterProjeto, filterMes, filterStatus]);
+    void load();
+  }, [load]);
 
   const impostosDoProjeto = impostos.filter((i) => i.projetoId === projetoId);
 
@@ -132,7 +149,8 @@ export function RegistrosPage() {
             className="mt-3"
           />
           {fieldError && <p className="mt-1 text-xs text-hangar-red">{fieldError}</p>}
-          <Button
+          <button
+            className="action-btn action-btn-save mt-3 w-full"
             onClick={async () => {
               if (!projetoId) return setFieldError('Projeto é obrigatório');
               if (!impostoId) return setFieldError('Imposto é obrigatório');
@@ -161,14 +179,13 @@ export function RegistrosPage() {
                 setObservacoes('');
                 push({ type: 'success', message: 'Registro criado' });
                 load();
-              } catch (e: any) {
-                push({ type: 'error', message: e.message });
+              } catch (error: unknown) {
+                push({ type: 'error', message: getErrorMessage(error) });
               }
             }}
-            className="mt-3 w-full"
           >
             Salvar
-          </Button>
+          </button>
         </Panel>
         <Panel className="xl:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -181,7 +198,11 @@ export function RegistrosPage() {
                 ))}
               </Select>
               <Input value={filterMes} onChange={(e) => setFilterMes(e.target.value)} placeholder="YYYY-MM" className="w-28" />
-              <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} className="w-32">
+              <Select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as '' | 'planejado' | 'realizado' | 'pipeline')}
+                className="w-32"
+              >
                 <option value="">Status</option>
                 <option value="planejado">Planejado</option>
                 <option value="realizado">Realizado</option>
@@ -223,13 +244,14 @@ export function RegistrosPage() {
                           <Input value={editReceita} onChange={(e) => setEditReceita(formatCurrencyInput(e.target.value))} placeholder="Receita" />
                           <Input value={editCusto} onChange={(e) => setEditCusto(formatCurrencyInput(e.target.value))} placeholder="Custo" />
                           <Input value={editMarginMeta} onChange={(e) => setEditMarginMeta(formatPercentInput(e.target.value))} placeholder="Margin %" />
-                          <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value as any)}>
+                          <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value as 'planejado' | 'realizado')}>
                             <option value="planejado">Planejado</option>
                             <option value="realizado">Realizado</option>
                           </Select>
                           <TextArea value={editObs} onChange={(e) => setEditObs(e.target.value)} placeholder="Obs" />
                           <div className="flex items-center gap-2">
-                            <Button
+                            <button
+                              className="action-btn action-btn-save"
                               onClick={async () => {
                                 if (!editProjeto) return setEditError('Projeto é obrigatório');
                                 if (!editImposto) return setEditError('Imposto é obrigatório');
@@ -254,9 +276,9 @@ export function RegistrosPage() {
                               }}
                             >
                               Salvar
-                            </Button>
+                            </button>
                             {editError && <span className="text-xs text-hangar-red">{editError}</span>}
-                            <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
+                            <button className="action-btn action-btn-cancel" onClick={() => setEditId(null)}>Cancelar</button>
                           </div>
                         </div>
                       </td>
@@ -279,7 +301,7 @@ export function RegistrosPage() {
                               {r.status}
                             </span>
                             <button
-                              className="text-xs text-hangar-cyan"
+                              className="action-btn action-btn-edit"
                               onClick={() => {
                                 setEditId(r.id);
                                 setEditProjeto(r.projetoId);
@@ -295,7 +317,7 @@ export function RegistrosPage() {
                               Editar
                             </button>
                             <button
-                              className="text-xs text-hangar-red"
+                              className="action-btn action-btn-delete"
                               onClick={async () => {
                                 if (!window.confirm('Excluir este registro?')) return;
                                 await apiClient.deleteRegistro(r.id);
@@ -356,8 +378,19 @@ function formatPercent(value?: number) {
   return `${Number(value).toFixed(1)}%`;
 }
 
-function applyPipeline(items: any[]) {
-  const byKey = new Map<string, any>();
+function applyPipeline(items: Array<{
+  id: string;
+  projetoId: string;
+  impostoId: string;
+  mesRef: string;
+  receitaBruta: number;
+  custoProjetado: number;
+  marginMeta?: number | null;
+  status: 'planejado' | 'realizado';
+  observacoes?: string | null;
+  updatedAt?: string;
+}>) {
+  const byKey = new Map<string, (typeof items)[number]>();
   for (const r of items) {
     const key = `${r.projetoId}-${String(r.mesRef).slice(0, 10)}`;
     const current = byKey.get(key);
@@ -367,7 +400,7 @@ function applyPipeline(items: any[]) {
     }
     if (current.status === 'realizado') {
       if (r.status === 'realizado') {
-        if (new Date(r.updatedAt) > new Date(current.updatedAt)) byKey.set(key, r);
+        if (new Date(r.updatedAt ?? 0).getTime() > new Date(current.updatedAt ?? 0).getTime()) byKey.set(key, r);
       }
       continue;
     }
@@ -375,7 +408,11 @@ function applyPipeline(items: any[]) {
       byKey.set(key, r);
       continue;
     }
-    if (new Date(r.updatedAt) > new Date(current.updatedAt)) byKey.set(key, r);
+    if (new Date(r.updatedAt ?? 0).getTime() > new Date(current.updatedAt ?? 0).getTime()) byKey.set(key, r);
   }
   return Array.from(byKey.values());
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Erro inesperado';
 }

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
-import { Button, Input, Panel, Select } from '../components/ui';
+import { Input, Panel, Select } from '../components/ui';
 import { useToast } from '../components/Toast';
 
 export function ClientesPage() {
@@ -17,15 +17,19 @@ export function ClientesPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const { push } = useToast();
 
-  const load = async () => {
-    const [t, c] = await Promise.all([apiClient.listTiers(), apiClient.listClientes()]);
-    setTiers(t);
-    setItems(c);
-  };
+  const load = useCallback(async () => {
+    try {
+      const [t, c] = await Promise.all([apiClient.listTiers(), apiClient.listClientes()]);
+      setTiers(t);
+      setItems(c);
+    } catch (error: unknown) {
+      push({ type: 'error', message: getErrorMessage(error) });
+    }
+  }, [push]);
 
   useEffect(() => {
-    load().catch((e) => push({ type: 'error', message: e.message }));
-  }, []);
+    void load();
+  }, [load]);
 
   return (
     <div className="px-6 py-6">
@@ -59,7 +63,8 @@ export function ClientesPage() {
             className="mt-3"
           />
           {fieldError && <p className="mt-1 text-xs text-hangar-red">{fieldError}</p>}
-          <Button
+          <button
+            className="action-btn action-btn-save mt-3 w-full"
             onClick={async () => {
               if (!tierId) {
                 setFieldError('Tier é obrigatório');
@@ -78,14 +83,13 @@ export function ClientesPage() {
                 setMarginMeta('');
                 push({ type: 'success', message: 'Cliente criado' });
                 load();
-              } catch (e: any) {
-                push({ type: 'error', message: e.message });
+              } catch (error: unknown) {
+                push({ type: 'error', message: getErrorMessage(error) });
               }
             }}
-            className="mt-3 w-full"
           >
             Salvar
-          </Button>
+          </button>
         </Panel>
         <Panel className="xl:col-span-2">
           <h3 className="text-xs md:text-sm font-semibold">Lista</h3>
@@ -122,7 +126,8 @@ export function ClientesPage() {
                         </td>
                         <td className="py-2">
                           <div className="flex items-center gap-2">
-                            <Button
+                            <button
+                              className="action-btn action-btn-save"
                               onClick={async () => {
                                 if (!editTier) {
                                   setEditError('Tier é obrigatório');
@@ -141,9 +146,9 @@ export function ClientesPage() {
                               }}
                             >
                               Salvar
-                            </Button>
+                            </button>
                             {editError && <span className="text-xs text-hangar-red">{editError}</span>}
-                            <button className="text-xs text-hangar-muted" onClick={() => setEditId(null)}>Cancelar</button>
+                            <button className="action-btn action-btn-cancel" onClick={() => setEditId(null)}>Cancelar</button>
                           </div>
                         </td>
                       </>
@@ -155,7 +160,7 @@ export function ClientesPage() {
                         <td className="py-2">
                           <div className="flex items-center gap-2">
                             <button
-                              className="text-xs text-hangar-cyan"
+                              className="action-btn action-btn-edit"
                               onClick={() => {
                                 setEditId(c.id);
                                 setEditNome(c.nome);
@@ -166,7 +171,7 @@ export function ClientesPage() {
                               Editar
                             </button>
                             <button
-                              className="text-xs text-hangar-red"
+                              className="action-btn action-btn-delete"
                               onClick={async () => {
                                 if (!window.confirm('Excluir este cliente?')) return;
                                 await apiClient.deleteCliente(c.id);
@@ -203,4 +208,8 @@ function Header({ title, description }: { title: string; description: string }) 
 function formatPercent(value?: number) {
   if (value === undefined || value === null) return '--';
   return `${Number(value).toFixed(1)}%`;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Erro inesperado';
 }
