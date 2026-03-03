@@ -19,42 +19,44 @@ export function Topbar({
   rightActions?: ReactNode;
 }) {
   return (
-    <div className="relative z-[1000] isolate border-b border-hangar-slate/30 bg-hangar-panel px-4 md:px-6 py-3 md:py-4 hud-panel">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
+    <div className="relative z-[1000] isolate border-b border-hangar-slate/20 bg-hangar-panel/95 px-4 py-3 md:px-6 md:py-4 hud-panel">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-2 md:gap-3">
           {onMenu && (
             <button
               onClick={onMenu}
-              className="mr-1 rounded-md border border-hangar-slate/40 px-2 py-1 text-[11px] text-hangar-muted transition hover:bg-hangar-surface md:hidden"
+              className="mr-1 rounded-xl border border-hangar-slate/40 px-3 py-1.5 text-[11px] text-hangar-muted transition hover:bg-hangar-surface md:hidden"
             >
               Menu
             </button>
           )}
-          <div className="text-base md:text-xl font-semibold">{title}</div>
-          <div className="text-[10px] md:text-xs text-hangar-muted">{subtitle}</div>
+          <div>
+            <div className="text-lg font-semibold md:text-2xl">{title}</div>
+            <div className="text-[11px] md:text-xs text-hangar-muted">{subtitle}</div>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 md:flex-nowrap md:justify-end">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3 lg:flex-nowrap lg:justify-end">
           {rightActions}
           <button
             onClick={onToggleTheme}
             aria-label="Alternar tema"
-            className="relative inline-flex h-8 w-16 items-center rounded-full border border-hangar-slate/40 bg-hangar-panel/90 px-1 transition hover:bg-hangar-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-hangar-cyan/50"
+            className="relative inline-flex h-9 w-16 items-center rounded-full border border-hangar-slate/40 bg-hangar-panel/90 px-1 transition hover:bg-hangar-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-hangar-cyan/50"
           >
-            <span className="absolute left-2 text-hangar-muted">
+            <span className="absolute left-2 text-hangar-muted/90">
               <SunIcon />
             </span>
-            <span className="absolute right-2 text-hangar-muted">
+            <span className="absolute right-2 text-hangar-muted/90">
               <MoonIcon />
             </span>
             <span
-              className={`absolute top-1 h-6 w-6 rounded-full bg-hangar-panel shadow-md transition ${
+              className={`absolute top-1 h-7 w-7 rounded-full bg-hangar-panel shadow-md transition ${
                 theme === 'dark' ? 'translate-x-7 border border-hangar-slate/50' : 'translate-x-0 border border-hangar-cyan/40'
               }`}
             />
           </button>
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2 md:mt-4">
+      <div className="mt-3 flex flex-wrap items-center gap-2 md:mt-4 md:gap-3">
         {children}
       </div>
     </div>

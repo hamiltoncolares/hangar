@@ -14,7 +14,7 @@
   --hangar-panel: #ffffff;
   --hangar-text: #0a0a0a;
   --hangar-muted: #4b5563;
-  --hangar-cyan: #00e5ff;
+  --hangar-cyan: #009fb8;
   --hangar-purple: #7c4dff;
   --hangar-green: #00e676;
   --hangar-red: #ff1744;
@@ -41,13 +41,34 @@
 }
 
 body {
-  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-family:
+    'IBM Plex Sans',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial;
   background: var(--hangar-bg);
   color: var(--hangar-text);
+  letter-spacing: 0.01em;
 }
 
-h1, h2, h3, h4, h5 {
-  font-family: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family:
+    'Space Grotesk',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial;
 }
 
 .hud-surface {
@@ -62,16 +83,17 @@ h1, h2, h3, h4, h5 {
     linear-gradient(rgba(84, 110, 122, 0.12) 1px, transparent 1px),
     linear-gradient(90deg, rgba(84, 110, 122, 0.12) 1px, transparent 1px);
   background-size: 28px 28px;
-  mask-image: radial-gradient(ellipse at 50% 10%, rgba(0,0,0,0.8), transparent 70%);
+  mask-image: radial-gradient(ellipse at 50% 10%, rgba(0, 0, 0, 0.8), transparent 70%);
 }
 
 .hud-panel {
   background: color-mix(in srgb, var(--hangar-panel) 92%, transparent);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(84, 110, 122, 0.25);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(84, 110, 122, 0.22);
+  border-radius: 16px;
   box-shadow:
-    0 0 0 1px rgba(0, 31, 63, 0.35),
-    0 14px 35px rgba(0, 0, 0, 0.25);
+    0 0 0 1px rgba(0, 31, 63, 0.24),
+    0 10px 30px rgba(0, 0, 0, 0.22);
 }
 
 .hud-glow {
@@ -111,9 +133,51 @@ h1, h2, h3, h4, h5 {
   background-position:
     calc(100% - 14px) calc(50% - 2px),
     calc(100% - 9px) calc(50% - 2px);
-  background-size: 5px 5px, 5px 5px;
+  background-size:
+    5px 5px,
+    5px 5px;
   background-repeat: no-repeat;
   padding-right: 28px;
+}
+
+.hud-glass-surface {
+  background: color-mix(in srgb, var(--hangar-panel) 86%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.hud-glass-popover {
+  background: color-mix(in srgb, var(--hangar-panel) 90%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.hud-glass-input {
+  background: color-mix(in srgb, var(--hangar-panel) 72%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+input[type='checkbox'] {
+  accent-color: var(--hangar-cyan);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(84, 110, 122, 0.45);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(84, 110, 122, 0.65);
+  background-clip: padding-box;
 }
 
 .enter {

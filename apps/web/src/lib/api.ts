@@ -40,13 +40,21 @@ export function getAuthToken() {
   return authToken;
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
+async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  const hasBody = init.body !== undefined && init.body !== null;
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+
+  if (hasBody && !isFormData && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (authToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${authToken}`);
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
-    },
-    ...init
+    ...init,
+    headers
   });
   if (!res.ok) {
     const text = await res.text();
@@ -201,7 +209,7 @@ export const apiClient = {
     api(`/impostos/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteImposto: (id: string) => api(`/impostos/${id}`, { method: 'DELETE' }),
 
-  updateRegistro: (id: string, data: any) =>
+  updateRegistro: (id: string, data: Record<string, unknown>) =>
     api(`/registros/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteRegistro: (id: string) => api(`/registros/${id}`, { method: 'DELETE' })
 };

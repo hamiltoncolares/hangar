@@ -13,7 +13,8 @@
     "build:api": "npm --workspace apps/api run build",
     "lint": "npm --workspace apps/web run lint && npm --workspace apps/api run lint",
     "format": "prettier . --write",
-    "prepare": "husky install || true"
+    "prepare": "husky install || true",
+    "test": "npm --workspace apps/web run test && npm --workspace apps/api run test"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

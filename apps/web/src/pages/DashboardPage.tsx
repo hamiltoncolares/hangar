@@ -11,9 +11,9 @@ export function DashboardPage({
   status,
   view
 }: {
-  tierId?: string;
-  clienteId?: string;
-  projetoId?: string;
+  tierId?: string[];
+  clienteId?: string[];
+  projetoId?: string[];
   ano: number;
   status?: string;
   view?: 'mensal' | 'trimestral';
@@ -64,9 +64,9 @@ export function DashboardPage({
         </div>
       )}
 
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-2 xl:grid-cols-5 enter">
-        <StatCard label="Receita Bruta" value={totals?.receita_bruta} accent="cyan" glow />
-        <StatCard label="Receita Líquida" value={totals?.receita_liquida} accent="purple" glow />
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 enter">
+        <StatCard label="Receita Bruta" value={totals?.receita_bruta} accent="cyan" />
+        <StatCard label="Receita Líquida" value={totals?.receita_liquida} accent="purple" />
         <StatCard label="Custo" value={totals?.custo} accent="orange" />
         <StatCard
           label="Margem Bruta"
@@ -83,7 +83,7 @@ export function DashboardPage({
       </div>
 
       <div className="mt-6 grid gap-6 grid-cols-1 xl:grid-cols-2 enter-delay">
-        <div className="rounded-lg p-4 md:p-5 hud-panel relative overflow-hidden">
+        <div className="rounded-2xl p-4 md:p-5 hud-panel relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 opacity-60">
             <div className="absolute inset-0 hud-grid" />
             <div className="absolute inset-0 bg-gradient-to-b from-hangar-accent/20 via-transparent to-transparent" />
@@ -99,7 +99,7 @@ export function DashboardPage({
               <div className="text-[10px] md:text-xs text-hangar-muted">Ano {ano}</div>
               <button
                 onClick={() => setChartAccum((v) => !v)}
-                className={`rounded-md border px-2 py-1 text-[10px] md:text-xs transition ${
+                className={`rounded-xl border px-2 py-1 text-[10px] md:text-xs transition ${
                   chartAccum
                     ? 'border-hangar-orange/60 text-hangar-orange bg-hangar-orange/10'
                     : 'border-hangar-slate/40 text-hangar-muted hover:bg-hangar-surface'
@@ -168,7 +168,7 @@ export function DashboardPage({
           </div>
         </div>
 
-        <div className="rounded-lg p-4 md:p-5 hud-panel relative overflow-hidden">
+        <div className="rounded-2xl p-4 md:p-5 hud-panel relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 opacity-60">
             <div className="absolute inset-0 hud-grid" />
             <div className="absolute inset-0 bg-gradient-to-b from-hangar-accent/20 via-transparent to-transparent" />
@@ -184,7 +184,7 @@ export function DashboardPage({
               <div className="text-[10px] md:text-xs text-hangar-muted">Ano {ano}</div>
               <button
                 onClick={() => setChartAccum((v) => !v)}
-                className={`rounded-md border px-2 py-1 text-[10px] md:text-xs transition ${
+                className={`rounded-xl border px-2 py-1 text-[10px] md:text-xs transition ${
                   chartAccum
                     ? 'border-hangar-orange/60 text-hangar-orange bg-hangar-orange/10'
                     : 'border-hangar-slate/40 text-hangar-muted hover:bg-hangar-surface'
@@ -271,7 +271,7 @@ export function DashboardPage({
       </div>
 
       <div className="mt-6 grid gap-6 grid-cols-1 xl:grid-cols-2 enter-delay">
-        <div className="rounded-lg p-4 md:p-5 hud-panel">
+        <div className="rounded-2xl p-4 md:p-5 hud-panel">
           <div className="text-base md:text-lg font-semibold hud-divider">Resumo do Ano</div>
           <div className="mt-4 space-y-3 text-xs md:text-sm">
             <SummaryRow label="Receita Bruta" value={totals?.receita_bruta} />
@@ -282,10 +282,10 @@ export function DashboardPage({
           </div>
         </div>
 
-        <div className="rounded-lg p-4 md:p-5 hud-panel">
+        <div className="rounded-2xl p-4 md:p-5 hud-panel">
           <div className="text-base md:text-lg font-semibold hud-divider">Participação por Cliente</div>
           <div className="mt-3 text-[10px] md:text-xs text-hangar-muted">
-            {tierId ? 'Dentro do Tier selecionado' : 'Todos os Tiers'}
+            {tierId?.length ? 'Dentro do Tier selecionado' : 'Todos os Tiers'}
           </div>
           <div className="mt-3 h-52">
             <ResponsiveContainer width="100%" height="100%">
@@ -317,14 +317,14 @@ export function DashboardPage({
         </div>
       </div>
 
-      <div className="mt-6 rounded-lg p-4 md:p-5 hud-panel enter">
+      <div className="mt-6 rounded-2xl p-4 md:p-5 hud-panel enter">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="text-base md:text-lg font-semibold hud-divider">
             {isQuarterly ? 'Tabela Trimestral' : 'Tabela Mensal'}
           </div>
           <button
             onClick={() => setHighVis((v) => !v)}
-            className={`rounded-md border px-3 py-1 text-[11px] md:text-xs transition ${
+            className={`rounded-xl border px-3 py-1 text-[11px] md:text-xs transition ${
               highVis
                 ? 'border-hangar-cyan/60 text-hangar-cyan bg-hangar-cyan/10'
                 : 'border-hangar-slate/40 text-hangar-muted hover:bg-hangar-surface'
@@ -420,10 +420,10 @@ function HudTooltip({ active, payload, label, labelTitle }: HudTooltipProps) {
   const data = payload[0]?.payload as DashboardPoint | undefined;
   if (!data) return null;
   return (
-    <div className="rounded-md border border-hangar-slate/60 bg-hangar-panel/95 px-3 py-2 text-xs text-hangar-text shadow-lg backdrop-blur">
+    <div className="rounded-xl border border-hangar-slate/60 bg-hangar-panel/70 px-3 py-2 text-xs text-hangar-text shadow-lg backdrop-blur-xl">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="text-hangar-text/80">{labelTitle ?? 'Mês'}</div>
-        <div>{label}</div>
+        <div className="font-medium text-hangar-text/90">{labelTitle ?? 'Mês'}</div>
+        <div className="font-medium">{label}</div>
       </div>
       <div className="flex items-center justify-between gap-3">
         <Badge color="purple">Líquida</Badge>
@@ -433,7 +433,7 @@ function HudTooltip({ active, payload, label, labelTitle }: HudTooltipProps) {
         <Badge color="orange">Custo</Badge>
         <div>{currency(data.custo)}</div>
       </div>
-      <div className="mt-2 text-hangar-muted">
+      <div className="mt-2 text-hangar-text/80">
         Margem Líquida: {currency(data.margem_liquida)} ({percent(data.margem_liquida_pct)})
       </div>
     </div>
@@ -445,10 +445,10 @@ function PlanRealTooltip({ active, payload, label, labelTitle }: HudTooltipProps
   const data = payload[0]?.payload as DashboardPoint | undefined;
   if (!data) return null;
   return (
-    <div className="rounded-md border border-hangar-slate/60 bg-hangar-panel/95 px-3 py-2 text-xs text-hangar-text shadow-lg backdrop-blur">
+    <div className="rounded-xl border border-hangar-slate/60 bg-hangar-panel/70 px-3 py-2 text-xs text-hangar-text shadow-lg backdrop-blur-xl">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <div className="text-hangar-text/80">{labelTitle ?? 'Mês'}</div>
-        <div>{label}</div>
+        <div className="font-medium text-hangar-text/90">{labelTitle ?? 'Mês'}</div>
+        <div className="font-medium">{label}</div>
       </div>
       <div className="flex items-center justify-between gap-3">
         <Badge color="purple">Planejado</Badge>
@@ -482,7 +482,7 @@ function Badge({ color, children }: { color: 'cyan' | 'purple' | 'orange' | 'gre
   return <span className={`rounded-full px-2 py-0.5 text-[10px] ${c}`}>{children}</span>;
 }
 
-const shareColors = ['#00E5FF', '#7C4DFF', '#00E676', '#FF9100', '#C0C0C0', '#546E7A', '#FF1744'];
+const shareColors = ['var(--hangar-cyan)', '#7C4DFF', '#00E676', '#FF9100', '#C0C0C0', '#546E7A', '#FF1744'];
 
 type ClienteSharePoint = { nome?: string; receita_bruta?: number; pct?: number };
 
@@ -494,7 +494,7 @@ function ClienteShareTooltip({ active, payload }: TooltipProps<number, string>) 
   return (
     <div className="rounded-lg border border-hangar-cyan/40 bg-hangar-panel/95 px-3 py-2 text-xs text-hangar-text shadow-xl backdrop-blur hud-glow">
       <div className="flex items-center gap-2 mb-1">
-        <span className="h-2 w-2 rounded-full" style={{ background: color || '#00E5FF' }} />
+        <span className="h-2 w-2 rounded-full" style={{ background: color || 'var(--hangar-cyan)' }} />
         <span className="text-hangar-muted">{data?.nome}</span>
       </div>
       <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1">

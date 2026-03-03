@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
 import { applyTheme, getInitialTheme, listenThemeSync, Theme } from './lib/theme';
@@ -101,22 +101,25 @@ export default function App() {
             <>
               {user?.role === 'admin' && (
                 <button
-                  className="rounded-md border border-hangar-slate/40 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
+                  className="inline-flex items-center gap-2 rounded-xl border border-hangar-slate/25 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
                   onClick={() => setActive('admin')}
                 >
+                  <AdminIcon />
                   Admin
                 </button>
               )}
-              <div className="text-[10px] md:text-xs text-hangar-muted">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-hangar-slate/30 px-3 py-2 text-[10px] md:text-xs text-hangar-muted">
+                <UserIcon />
                 {user.name || user.email}
               </div>
               <button
-                className="rounded-md border border-hangar-slate/40 px-3 py-2 text-[10px] md:text-xs text-hangar-muted transition hover:bg-hangar-surface"
+                className="inline-flex items-center gap-2 rounded-xl border border-hangar-slate/25 px-3 py-2 text-[10px] md:text-xs text-hangar-muted transition hover:bg-hangar-surface"
                 onClick={() => {
                   setAuthToken('');
                   setUser(null);
                 }}
               >
+                <SignOutIcon />
                 Sair
               </button>
             </>
@@ -127,7 +130,7 @@ export default function App() {
               <select
                 value={String(year)}
                 onChange={(e) => setYear(Number(e.target.value))}
-                className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
+                className="rounded-xl border border-hangar-slate/20 hud-glass-surface px-2 py-2 text-xs hud-select"
               >
                 {[year - 1, year, year + 1].map((y) => (
                   <option key={y} value={y}>
@@ -166,7 +169,7 @@ export default function App() {
               <select
                 value={dashboardStatus}
                 onChange={(e) => setDashboardStatus(e.target.value as DashboardStatus)}
-                className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
+                className="rounded-xl border border-hangar-slate/20 hud-glass-surface px-2 py-2 text-xs hud-select"
               >
                 <option value="pipeline">Pipeline</option>
                 <option value="planejado">Planejado</option>
@@ -175,13 +178,13 @@ export default function App() {
               <select
                 value={dashboardView}
                 onChange={(e) => setDashboardView(e.target.value as DashboardView)}
-                className="rounded-md border border-hangar-slate/40 bg-transparent px-2 py-2 text-xs hud-select"
+                className="rounded-xl border border-hangar-slate/20 hud-glass-surface px-2 py-2 text-xs hud-select"
               >
                 <option value="mensal">Mensal</option>
                 <option value="trimestral">Trimestral</option>
               </select>
               <button
-                className="rounded-md border border-hangar-slate/40 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
+                className="inline-flex items-center gap-2 rounded-xl border border-hangar-slate/25 px-3 py-2 text-xs text-hangar-muted transition hover:bg-hangar-surface"
                 onClick={async () => {
                   const params = tierId.length ? `?${tierId.map((id) => `tier_id=${id}`).join('&')}` : '';
                   const res = await fetch(`/api/export/excel${params}`, {
@@ -196,6 +199,7 @@ export default function App() {
                   URL.revokeObjectURL(url);
                 }}
               >
+                <DownloadIcon />
                 Exportar Excel
               </button>
             </div>
@@ -279,6 +283,7 @@ function FilterMultiSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
   const allSelected = options.length > 0 && selected.length === options.length;
   const visible = options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()));
   useEffect(() => {
@@ -286,6 +291,16 @@ function FilterMultiSelect({
       onChange(options.map((o) => o.id));
     }
   }, [options, selected.length, onChange]);
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
   const summary =
     selected.length === 0
       ? placeholder
@@ -296,60 +311,109 @@ function FilterMultiSelect({
       : `${label} (${selected.length})`;
 
   return (
-    <div className="relative z-50">
+    <div className="relative z-50" ref={ref}>
       <button
-        className="min-w-[180px] rounded-md border border-hangar-slate/40 bg-transparent px-3 py-2 text-xs text-hangar-text hover:bg-hangar-surface"
+        className="min-w-[180px] rounded-xl border border-hangar-slate/20 hud-glass-surface px-3 py-2 text-xs text-hangar-text shadow-sm transition hover:bg-hangar-surface"
         onClick={() => setOpen((v) => !v)}
       >
-        <div className="text-[10px] text-hangar-muted">{label}</div>
-        <div className="truncate">{summary}</div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 text-left">
+            <div className="text-[10px] text-hangar-muted">{label}</div>
+            <div className="truncate">{summary}</div>
+          </div>
+          <ChevronDownIcon />
+        </div>
       </button>
       {open && (
-        <div className="absolute z-[9999] mt-2 w-[260px] rounded-lg border border-hangar-slate/30 bg-hangar-panel p-3 shadow-2xl">
-          <input
-            className="w-full rounded-md border border-hangar-slate/40 bg-transparent px-2 py-1 text-xs text-hangar-text placeholder:text-hangar-muted focus:outline-none focus:ring-2 focus:ring-hangar-cyan/40"
-            placeholder={`Buscar ${label.toLowerCase()}`}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="mt-2 max-h-48 overflow-auto space-y-1 text-xs">
-            <label className="flex items-center gap-2 rounded px-2 py-1 hover:bg-hangar-surface/60">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                onChange={() => {
-                  onChange(allSelected ? [] : options.map((o) => o.id));
-                }}
-              />
-              <span>Todos</span>
-            </label>
-            {visible.map((o) => (
-              <label key={o.id} className="flex items-center gap-2 rounded px-2 py-1 hover:bg-hangar-surface/60">
+        <div className="absolute z-[9999] mt-2 w-[300px] overflow-hidden rounded-2xl border border-hangar-slate/15 shadow-2xl isolate hud-glass-popover">
+          <div className="pointer-events-none absolute inset-0" />
+          <div className="relative z-10 p-3">
+            <input
+              className="w-full rounded-xl border border-hangar-slate/20 hud-glass-input px-3 py-2 text-xs text-hangar-text placeholder:text-hangar-muted focus:outline-none focus:ring-2 focus:ring-hangar-cyan/35"
+              placeholder={`Buscar ${label.toLowerCase()}`}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <div className="mt-2 max-h-56 overflow-auto space-y-1 rounded-xl border border-hangar-slate/15 hud-glass-input p-1 text-xs pr-1">
+              <label className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-hangar-surface/60">
                 <input
                   type="checkbox"
-                  checked={selected.includes(o.id)}
+                  checked={allSelected}
                   onChange={() => {
-                    const next = selected.includes(o.id)
-                      ? selected.filter((id) => id !== o.id)
-                      : [...selected, o.id];
-                    onChange(next);
+                    onChange(allSelected ? [] : options.map((o) => o.id));
                   }}
                 />
-                <span>{o.label}</span>
+                <span className="font-medium">Todos</span>
               </label>
-            ))}
-            {visible.length === 0 && <div className="text-hangar-muted">Nenhum resultado</div>}
-          </div>
-          <div className="mt-3 flex items-center justify-between text-xs">
-            <button className="text-hangar-muted" onClick={() => onChange([])}>
-              Limpar
-            </button>
-            <button className="text-hangar-cyan" onClick={() => setOpen(false)}>
-              Fechar
-            </button>
+              {visible.map((o) => (
+                <label key={o.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-hangar-surface/60">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(o.id)}
+                    onChange={() => {
+                      const next = selected.includes(o.id)
+                        ? selected.filter((id) => id !== o.id)
+                        : [...selected, o.id];
+                      onChange(next);
+                    }}
+                  />
+                  <span>{o.label}</span>
+                </label>
+              ))}
+              {visible.length === 0 && <div className="text-hangar-muted">Nenhum resultado</div>}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs">
+              <button className="text-hangar-muted hover:text-hangar-text" onClick={() => onChange([])}>
+                Limpar
+              </button>
+              <span className="text-hangar-muted">{selected.length}/{options.length} selecionados</span>
+              <button className="text-hangar-cyan hover:brightness-110" onClick={() => setOpen(false)}>
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function AdminIcon() {
+  return (
+    <svg viewBox="0 0 640 512" className="h-3.5 w-3.5" aria-hidden="true">
+      <path fill="currentColor" d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zM96 288c-53 0-96 43-96 96v32c0 17.7 14.3 32 32 32h320c17.7 0 32-14.3 32-32V384c0-53-43-96-96-96H96zm398.4-89.6l22.6-45.2c5.4-10.8 0-24-10.8-29.3s-24 0-29.3 10.8l-22.6 45.2c-9.7-3.1-20-4.8-30.7-4.8-57.4 0-104 46.6-104 104s46.6 104 104 104 104-46.6 104-104c0-31.8-14.2-60.2-36.6-79z" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg viewBox="0 0 448 512" className="h-3.5 w-3.5" aria-hidden="true">
+      <path fill="currentColor" d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zM313.6 288h-8.2c-22.2 10.2-46.9 16-73.4 16s-51.2-5.8-73.4-16h-8.2C67.2 288 0 355.2 0 438.4 0 479 33 512 73.6 512h300.8c40.6 0 73.6-33 73.6-73.6C448 355.2 380.8 288 313.6 288z" />
+    </svg>
+  );
+}
+
+function SignOutIcon() {
+  return (
+    <svg viewBox="0 0 512 512" className="h-3.5 w-3.5" aria-hidden="true">
+      <path fill="currentColor" d="M502.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-96-96c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L402.7 224H192c-17.7 0-32 14.3-32 32s14.3 32 32 32H402.7l-41.4 41.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l96-96zM160 96c17.7 0 32-14.3 32-32S177.7 32 160 32H96C43 32 0 75 0 128V384c0 53 43 96 96 96h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H96c-17.7 0-32-14.3-32-32V128c0-17.7 14.3-32 32-32h64z" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 512 512" className="h-3.5 w-3.5" aria-hidden="true">
+      <path fill="currentColor" d="M256 0c17.7 0 32 14.3 32 32V274.7l73.4-73.4c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3l-128 128c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L224 274.7V32c0-17.7 14.3-32 32-32zM64 352c35.3 0 64 28.7 64 64v32H384V416c0-35.3 28.7-64 64-64s64 28.7 64 64v32c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V416c0-35.3 28.7-64 64-64z" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg viewBox="0 0 320 512" className="h-3 w-3 text-hangar-cyan/80" aria-hidden="true">
+      <path fill="currentColor" d="M182.6 406.6c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7l105.4-105.4c12.5-12.5 32.8-12.5 45.3 0s12.5 32.8 0 45.3l-128 128z" />
+    </svg>
   );
 }
