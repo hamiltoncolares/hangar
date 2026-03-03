@@ -173,7 +173,11 @@ export function ProjetosPage() {
                       <>
                         <td className="py-2">{p.nome}</td>
                         <td className="py-2 text-hangar-muted">{clientes.find((c) => c.id === p.clienteId)?.nome ?? '—'}</td>
-                        <td className="py-2 text-hangar-muted">{p.status}</td>
+                        <td className="py-2 text-hangar-muted">
+                          <span className={`status-tag ${p.status === 'ativo' ? 'status-tag-ativo' : 'status-tag-pausado'}`}>
+                            {p.status}
+                          </span>
+                        </td>
                         <td className="py-2 text-hangar-muted">{formatPercent(p.marginMeta)}</td>
                         <td className="py-2">
                           <div className="flex items-center gap-2">

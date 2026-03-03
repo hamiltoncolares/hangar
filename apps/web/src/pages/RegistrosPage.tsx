@@ -291,13 +291,7 @@ export function RegistrosPage() {
                         <td className="py-2 text-hangar-muted">{formatPercent(r.marginMeta)}</td>
                         <td className="py-2">
                           <div className="flex items-center gap-2">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] ${
-                                r.status === 'realizado'
-                                  ? 'bg-hangar-green/15 text-hangar-green'
-                                  : 'bg-hangar-orange/15 text-hangar-orange'
-                              }`}
-                            >
+                            <span className={`status-tag ${r.status === 'realizado' ? 'status-tag-realizado' : 'status-tag-planejado'}`}>
                               {r.status}
                             </span>
                             <button
